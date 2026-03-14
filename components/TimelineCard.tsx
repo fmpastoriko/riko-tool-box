@@ -184,14 +184,20 @@ function TimelineModal({
         <div className="space-y-4">
           <div>
             <p className="section-label">Problem</p>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--secondary)" }}>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--secondary)" }}
+            >
               {entry.problem}
             </p>
           </div>
 
           <div>
             <p className="section-label">What I Built</p>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--secondary)" }}>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--secondary)" }}
+            >
               {parseLinks(entry.whatIBuilt)}
             </p>
           </div>
@@ -251,7 +257,10 @@ function TimelineModal({
                   className="text-sm flex gap-2"
                   style={{ color: "var(--secondary)" }}
                 >
-                  <span style={{ color: "var(--accent)" }} className="flex-shrink-0">
+                  <span
+                    style={{ color: "var(--accent)" }}
+                    className="flex-shrink-0"
+                  >
                     ▸
                   </span>
                   {item}
@@ -331,7 +340,10 @@ export default function TimelineCard({
               >
                 {entry.role}
               </h3>
-              <p className="text-sm mt-0.5" style={{ color: "var(--secondary)" }}>
+              <p
+                className="text-sm mt-0.5"
+                style={{ color: "var(--secondary)" }}
+              >
                 {entry.company}
               </p>
               <p

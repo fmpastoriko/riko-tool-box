@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { diffLines, diffChars, type Change } from "diff";
 import Link from "next/link";
@@ -199,6 +199,14 @@ async function autoSave(textA: string, textB: string): Promise<string | null> {
 }
 
 export default function TextComparePage() {
+  return (
+    <Suspense>
+      <TextCompareInner />
+    </Suspense>
+  );
+}
+
+function TextCompareInner() {
   const searchParams = useSearchParams();
   const [left, setLeft] = useState(() => searchParams.get("a") ?? "");
   const [right, setRight] = useState(() => searchParams.get("b") ?? "");
@@ -250,7 +258,8 @@ export default function TextComparePage() {
             Text Compare
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-            Myers diff (jsdiff) — side-by-side with inline character highlighting.{" "}
+            Myers diff (jsdiff) — side-by-side with inline character
+            highlighting.{" "}
             <a
               href="https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c"
               target="_blank"

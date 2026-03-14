@@ -30,7 +30,8 @@ export default function Nav() {
               href={l.href}
               className="text-sm px-2 py-1 rounded transition-colors"
               style={{
-                color: pathname === l.href ? "var(--accent)" : "var(--secondary)",
+                color:
+                  pathname === l.href ? "var(--accent)" : "var(--secondary)",
               }}
             >
               {l.label}

@@ -39,7 +39,9 @@ export default function HomePage() {
             className="leading-relaxed text-sm sm:text-base"
             style={{ color: "var(--secondary)" }}
           >
-            {"Welcome! This site is meant as a showcase for my work and my capability, while also as my personal tool-box. Most of these tools were originally built for my own use, so things might feel a bit jumbled lol. Still, I hope they give a good sense of what I can do as a Software Engineer, Data Engineer, and/or Data Analyst."}
+            {
+              "Welcome! This site is meant as a showcase for my work and my capability, while also as my personal tool-box. Most of these tools were originally built for my own use, so things might feel a bit jumbled lol. Still, I hope they give a good sense of what I can do as a Software Engineer, Data Engineer, and/or Data Analyst."
+            }
           </p>
         </div>
 
@@ -53,7 +55,10 @@ export default function HomePage() {
                 className="card flex items-center gap-3 px-4 py-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--accent)]"
               >
                 <span className="text-base leading-none">{t.icon}</span>
-                <span className="text-xs font-mono" style={{ color: "var(--secondary)" }}>
+                <span
+                  className="text-xs font-mono"
+                  style={{ color: "var(--secondary)" }}
+                >
                   {t.label}
                 </span>
               </Link>
@@ -65,7 +70,10 @@ export default function HomePage() {
       <section className="flex flex-col flex-1 min-h-0">
         <div className="flex items-baseline gap-3 mb-4">
           <p className="section-label mb-0">{"Experience"}</p>
-          <h2 className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
+          <h2
+            className="text-2xl font-bold"
+            style={{ color: "var(--primary)" }}
+          >
             {"Career Highlights"}
           </h2>
         </div>
