@@ -10,6 +10,23 @@ type Side = {
   lineNum: number;
 } | null;
 
+function reconcilePairs(pairs: { left: Side; right: Side }[]): { left: Side; right: Side }[] {
+  return pairs.map((pair) => {
+    const { left, right } = pair;
+    if (
+      left?.type === "removed" &&
+      right?.type === "added" &&
+      left.text === right.text
+    ) {
+      return {
+        left: { ...left, type: "equal" },
+        right: { ...right, type: "equal" },
+      };
+    }
+    return pair;
+  });
+}
+
 function buildSideBySide(changes: Change[]) {
   const left: Side[] = [],
     right: Side[] = [];
@@ -52,7 +69,7 @@ function buildSideBySide(changes: Change[]) {
         pairs.push({ left: removed[k] ?? null, right: added[k] ?? null });
     }
   }
-  return pairs;
+  return reconcilePairs(pairs);
 }
 
 type Span = { text: string; changed: boolean };
@@ -258,8 +275,7 @@ function TextCompareInner() {
             Text Compare
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-            Myers diff (jsdiff) — side-by-side with inline character
-            highlighting.{" "}
+            Myers diff (jsdiff) — side-by-side with inline character highlighting.{" "}
             <a
               href="https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c"
               target="_blank"
