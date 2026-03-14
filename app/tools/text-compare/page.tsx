@@ -281,7 +281,7 @@ function TextCompareInner() {
                 <span>saving…</span>
               ))}
           </div>
-          <Link href="/history" className="btn-ghost text-sm">
+          <Link href="/tools/text-compare/history" className="btn-ghost text-sm">
             History
           </Link>
         </div>
