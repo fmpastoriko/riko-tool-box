@@ -1,0 +1,35 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import Nav from "@/components/Nav";
+import { LightboxProvider } from "@/lib/lightbox";
+
+export const metadata: Metadata = {
+  title: "Riko's Toolbox",
+  description:
+    "Riko's Toolbox — interactive tools built by Fransiskus Magnis Pastoriko.",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t!=='light'&&d))document.documentElement.classList.add('dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body suppressHydrationWarning className="min-h-screen flex flex-col">
+        <LightboxProvider>
+          <Nav />
+          <main className="flex-1">{children}</main>
+        </LightboxProvider>
+      </body>
+    </html>
+  );
+}

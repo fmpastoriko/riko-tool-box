@@ -1,0 +1,135 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f8f8fc;
+  --surface: #ffffff;
+  --border: #e4e4e7;
+  --muted: #a1a1aa;
+  --secondary: #52525b;
+  --primary: #18181b;
+  --accent: #6d57f8;
+  --accent-hover: #5845d6;
+  --accent-dim: rgba(109, 87, 248, 0.08);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  --bg: #0d0d0f;
+  --surface: #17171a;
+  --border: #27272b;
+  --muted: #52525b;
+  --secondary: #a1a1aa;
+  --primary: #f4f4f5;
+  --accent: #6d57f8;
+  --accent-hover: #7c6af7;
+  --accent-dim: rgba(109, 87, 248, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--primary);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--primary);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-150 cursor-pointer;
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all duration-150 cursor-pointer;
+    border: 1px solid var(--border);
+    color: var(--secondary);
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--primary);
+  }
+  .tag {
+    @apply text-xs font-mono px-2 py-0.5 rounded;
+    background: var(--border);
+    color: var(--secondary);
+  }
+  .section-label {
+    @apply text-xs font-mono tracking-widest uppercase mb-1;
+    color: var(--accent);
+  }
+  .input-base {
+    @apply w-full text-sm font-mono rounded-lg px-3 py-2 focus:outline-none transition-colors resize-none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--primary);
+  }
+  .input-base::placeholder {
+    color: var(--muted);
+  }
+  .input-base:focus {
+    border-color: var(--accent);
+  }
+}
+
+@media print {
+  nav,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+}
