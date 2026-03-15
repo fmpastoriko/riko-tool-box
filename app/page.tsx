@@ -166,7 +166,7 @@ export default function HomePage() {
 
     function onTouchMove(e: TouchEvent) {
       const dy = e.touches[0].clientY - touchStartY.current;
-      if (dy < 0) {
+      if (dy !== 0) {
         setTimelineFullscreen(true);
       }
     }
