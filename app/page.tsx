@@ -51,12 +51,40 @@ function SectionHeading({ label, title }: { label: string; title: string }) {
 }
 
 function TimelineFullscreen({ onClose }: { onClose: () => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef(0);
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    function onTouchStart(e: TouchEvent) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      const dy = e.touches[0].clientY - touchStartY.current;
+      const isDraggingDown = dy > 0;
+      const scrollTop = scrollRef.current?.scrollTop ?? 1;
+      if (isDraggingDown && scrollTop === 0) {
+        onClose();
+      }
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [onClose]);
 
   return createPortal(
     <div
@@ -90,7 +118,7 @@ function TimelineFullscreen({ onClose }: { onClose: () => void }) {
           ✕ close
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
         <Timeline />
       </div>
     </div>,
@@ -100,13 +128,40 @@ function TimelineFullscreen({ onClose }: { onClose: () => void }) {
 
 export default function HomePage() {
   const [timelineFullscreen, setTimelineFullscreen] = useState(false);
-  const scrollTriggered = useRef(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef(0);
+  const lastGestureWasDown = useRef(false);
 
-  function handleTimelineScroll() {
-    if (!scrollTriggered.current) {
-      scrollTriggered.current = true;
-      setTimelineFullscreen(true);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+
+    function onTouchStart(e: TouchEvent) {
+      touchStartY.current = e.touches[0].clientY;
     }
+
+    function onTouchMove(e: TouchEvent) {
+      const dy = e.touches[0].clientY - touchStartY.current;
+      const isDraggingUp = dy < 0; // finger moving up = cards move down
+
+      if (isDraggingUp) {
+        lastGestureWasDown.current = true;
+        setTimelineFullscreen(true);
+      } else {
+        lastGestureWasDown.current = false;
+      }
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
+
+  function handleClose() {
+    setTimelineFullscreen(false);
   }
 
   return (
@@ -208,27 +263,22 @@ export default function HomePage() {
         <section className="flex flex-col flex-1 min-h-0">
           <SectionHeading label="Experience" title="Career Highlights" />
           <div
-            className="flex-1 min-h-0 overflow-y-auto rounded-xl border pr-1"
+            ref={previewRef}
+            className="flex-1 min-h-0 overflow-y-auto rounded-xl border pr-1 relative"
             style={{
               borderColor: "var(--border)",
               background: "var(--bg)",
               padding: "0.75rem",
             }}
-            onScroll={handleTimelineScroll}
           >
-            <Timeline />
+            <div className="pointer-events-none">
+              <Timeline />
+            </div>
           </div>
         </section>
       </div>
 
-      {timelineFullscreen && (
-        <TimelineFullscreen
-          onClose={() => {
-            setTimelineFullscreen(false);
-            scrollTriggered.current = false;
-          }}
-        />
-      )}
+      {timelineFullscreen && <TimelineFullscreen onClose={handleClose} />}
     </>
   );
 }
