@@ -335,7 +335,7 @@ export default function TimelineCard({
                 </span>
               </div>
               <h3
-                className="font-semibold text-base sm:text-lg truncate"
+                className="font-semibold text-sm sm:text-base truncate"
                 style={{ color: "var(--primary)" }}
               >
                 {entry.role}
@@ -352,8 +352,9 @@ export default function TimelineCard({
               >
                 {parseLinks(entry.whatIBuilt)}
               </p>
+              {/* Impact summary: hidden on mobile */}
               <p
-                className="text-sm mt-1 leading-relaxed"
+                className="hidden sm:block text-sm mt-1 leading-relaxed"
                 style={{ color: "var(--muted)" }}
               >
                 Impact: {entry.impactSummary}

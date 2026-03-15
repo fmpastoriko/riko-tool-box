@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 import { LightboxProvider } from "@/lib/lightbox";
 
 export const metadata: Metadata = {
@@ -24,10 +25,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-screen flex flex-col">
+      <body suppressHydrationWarning className="min-h-screen">
         <LightboxProvider>
           <Nav />
-          <main className="flex-1">{children}</main>
+          <main className="pb-8">{children}</main>
+          <Footer />
         </LightboxProvider>
       </body>
     </html>

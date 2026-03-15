@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { diffLines, diffChars, type Change } from "diff";
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
 type Side = {
   text: string;
@@ -10,7 +11,9 @@ type Side = {
   lineNum: number;
 } | null;
 
-function reconcilePairs(pairs: { left: Side; right: Side }[]): { left: Side; right: Side }[] {
+function reconcilePairs(
+  pairs: { left: Side; right: Side }[],
+): { left: Side; right: Side }[] {
   return pairs.map((pair) => {
     const { left, right } = pair;
     if (
@@ -236,20 +239,6 @@ function TextCompareInner() {
     [left, right],
   );
   const pairs = useMemo(() => buildSideBySide(changes), [changes]);
-  const stats = useMemo(
-    () => ({
-      added: changes
-        .filter((c) => c.added)
-        .reduce((s, c) => s + c.value.split("\n").filter(Boolean).length, 0),
-      removed: changes
-        .filter((c) => c.removed)
-        .reduce((s, c) => s + c.value.split("\n").filter(Boolean).length, 0),
-      equal: changes
-        .filter((c) => !c.added && !c.removed)
-        .reduce((s, c) => s + c.value.split("\n").filter(Boolean).length, 0),
-    }),
-    [changes],
-  );
 
   useEffect(() => {
     if (!left || !right) return;
@@ -275,7 +264,8 @@ function TextCompareInner() {
             Text Compare
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-            Myers diff (jsdiff) — side-by-side with inline character highlighting.{" "}
+            Myers diff (jsdiff) — side-by-side with inline character
+            highlighting.{" "}
             <a
               href="https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c"
               target="_blank"
@@ -297,7 +287,10 @@ function TextCompareInner() {
                 <span>saving…</span>
               ))}
           </div>
-          <Link href="/tools/text-compare/history" className="btn-ghost text-sm">
+          <Link
+            href="/tools/text-compare/history"
+            className="btn-ghost text-sm"
+          >
             History
           </Link>
         </div>
@@ -307,16 +300,16 @@ function TextCompareInner() {
         {(
           [
             {
-              label: "Original",
+              label: "First Text",
               value: left,
               set: setLeft,
-              placeholder: "Paste original text...",
+              placeholder: "Paste first text...",
             },
             {
-              label: "Modified",
+              label: "Second Text",
               value: right,
               set: setRight,
-              placeholder: "Paste modified text...",
+              placeholder: "Paste second text...",
             },
           ] as const
         ).map(({ label, value, set, placeholder }) => (
@@ -339,18 +332,7 @@ function TextCompareInner() {
 
       {changes.length > 0 && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-4 text-sm">
-              <span style={{ color: "rgb(34,197,94)" }}>
-                +{stats.added} added
-              </span>
-              <span style={{ color: "rgb(239,68,68)" }}>
-                -{stats.removed} removed
-              </span>
-              <span style={{ color: "var(--muted)" }}>
-                {stats.equal} unchanged
-              </span>
-            </div>
+          <div className="flex justify-end">
             <div className="flex gap-1.5">
               {(["split", "unified"] as const).map((m) => (
                 <button
@@ -388,7 +370,7 @@ function TextCompareInner() {
                   }}
                 >
                   <span className="pl-11" style={{ color: "var(--muted)" }}>
-                    Original
+                    First Text
                   </span>
                   <span
                     className="pl-11 border-l"
@@ -397,7 +379,7 @@ function TextCompareInner() {
                       borderColor: "var(--border)",
                     }}
                   >
-                    Modified
+                    Second Text
                   </span>
                 </div>
                 {pairs.map((pair, i) => (
@@ -467,6 +449,8 @@ function TextCompareInner() {
           Paste text in both panels to see the diff
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }

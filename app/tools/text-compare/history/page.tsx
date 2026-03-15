@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
+import Footer from "@/components/Footer";
 
 interface Comparison {
   id: string;
@@ -232,6 +233,8 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }
