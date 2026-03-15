@@ -1,4 +1,6 @@
 "use client";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Timeline from "@/components/Timeline";
 import Link from "next/link";
 
@@ -38,14 +40,75 @@ function SectionHeading({ label, title }: { label: string; title: string }) {
   return (
     <div className="flex items-baseline gap-2 mb-3">
       <p className="section-label mb-0">{label}</p>
-      <h2 className="text-lg font-semibold sm:text-2xl sm:font-bold" style={{ color: "var(--primary)" }}>
+      <h2
+        className="text-lg font-semibold sm:text-2xl sm:font-bold"
+        style={{ color: "var(--primary)" }}
+      >
         {title}
       </h2>
     </div>
   );
 }
 
+function TimelineFullscreen({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 8000,
+        background: "var(--bg)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+      >
+        <div className="flex items-baseline gap-2">
+          <p className="section-label mb-0">Experience</p>
+          <h2
+            className="text-lg font-semibold"
+            style={{ color: "var(--primary)" }}
+          >
+            Career Highlights
+          </h2>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-xs font-mono px-3 py-1.5 rounded-lg transition-colors"
+          style={{ background: "var(--border)", color: "var(--secondary)" }}
+        >
+          ✕ close
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <Timeline />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export default function HomePage() {
+  const [timelineFullscreen, setTimelineFullscreen] = useState(false);
+  const scrollTriggered = useRef(false);
+
+  function handleTimelineScroll() {
+    if (!scrollTriggered.current) {
+      scrollTriggered.current = true;
+      setTimelineFullscreen(true);
+    }
+  }
+
   return (
     <>
       {/* ── DESKTOP ─────────────────────────────────────────── */}
@@ -151,11 +214,21 @@ export default function HomePage() {
               background: "var(--bg)",
               padding: "0.75rem",
             }}
+            onScroll={handleTimelineScroll}
           >
             <Timeline />
           </div>
         </section>
       </div>
+
+      {timelineFullscreen && (
+        <TimelineFullscreen
+          onClose={() => {
+            setTimelineFullscreen(false);
+            scrollTriggered.current = false;
+          }}
+        />
+      )}
     </>
   );
 }
