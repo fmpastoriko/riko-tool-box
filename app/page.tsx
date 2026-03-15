@@ -50,7 +50,13 @@ function SectionHeading({ label, title }: { label: string; title: string }) {
   );
 }
 
-function TimelineFullscreen({ onClose }: { onClose: () => void }) {
+function TimelineFullscreen({
+  initialScroll,
+  onClose,
+}: {
+  initialScroll: number;
+  onClose: (scrollPos: number) => void;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
 
@@ -60,6 +66,13 @@ function TimelineFullscreen({ onClose }: { onClose: () => void }) {
       document.body.style.overflow = "";
     };
   }, []);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    if (scrollRef.current && initialScroll > 0) {
+      scrollRef.current.scrollTop = initialScroll;
+    }
+  }, [initialScroll]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -74,7 +87,7 @@ function TimelineFullscreen({ onClose }: { onClose: () => void }) {
       const isDraggingDown = dy > 0;
       const scrollTop = scrollRef.current?.scrollTop ?? 1;
       if (isDraggingDown && scrollTop === 0) {
-        onClose();
+        onClose(0);
       }
     }
 
@@ -85,6 +98,10 @@ function TimelineFullscreen({ onClose }: { onClose: () => void }) {
       el.removeEventListener("touchmove", onTouchMove);
     };
   }, [onClose]);
+
+  function handleClose() {
+    onClose(scrollRef.current?.scrollTop ?? 0);
+  }
 
   return createPortal(
     <div
@@ -111,7 +128,7 @@ function TimelineFullscreen({ onClose }: { onClose: () => void }) {
           </h2>
         </div>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="text-xs font-mono px-3 py-1.5 rounded-lg transition-colors"
           style={{ background: "var(--border)", color: "var(--secondary)" }}
         >
@@ -130,7 +147,14 @@ export default function HomePage() {
   const [timelineFullscreen, setTimelineFullscreen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
-  const lastGestureWasDown = useRef(false);
+  const savedScrollPos = useRef(0);
+
+  // Sync preview scroll position whenever savedScrollPos changes
+  useEffect(() => {
+    if (!timelineFullscreen && previewRef.current) {
+      previewRef.current.scrollTop = savedScrollPos.current;
+    }
+  }, [timelineFullscreen]);
 
   useEffect(() => {
     const el = previewRef.current;
@@ -142,13 +166,8 @@ export default function HomePage() {
 
     function onTouchMove(e: TouchEvent) {
       const dy = e.touches[0].clientY - touchStartY.current;
-      const isDraggingUp = dy < 0; // finger moving up = cards move down
-
-      if (isDraggingUp) {
-        lastGestureWasDown.current = true;
+      if (dy < 0) {
         setTimelineFullscreen(true);
-      } else {
-        lastGestureWasDown.current = false;
       }
     }
 
@@ -160,7 +179,8 @@ export default function HomePage() {
     };
   }, []);
 
-  function handleClose() {
+  function handleClose(scrollPos: number) {
+    savedScrollPos.current = scrollPos;
     setTimelineFullscreen(false);
   }
 
@@ -223,7 +243,7 @@ export default function HomePage() {
       {/* ── MOBILE ──────────────────────────────────────────── */}
       <div
         className="sm:hidden flex flex-col max-w-6xl mx-auto px-4 py-4"
-        style={{ height: "calc(100vh - 56px - 36px)" }}
+        style={{ height: "calc(100vh - 56px)" }}
       >
         <section className="animate-fade-in mb-4">
           <div className="flex flex-row gap-3 items-start mb-3">
@@ -264,7 +284,7 @@ export default function HomePage() {
           <SectionHeading label="Experience" title="Career Highlights" />
           <div
             ref={previewRef}
-            className="flex-1 min-h-0 overflow-y-auto rounded-xl border pr-1 relative"
+            className="flex-1 min-h-0 overflow-y-auto rounded-xl border pr-1"
             style={{
               borderColor: "var(--border)",
               background: "var(--bg)",
@@ -278,7 +298,12 @@ export default function HomePage() {
         </section>
       </div>
 
-      {timelineFullscreen && <TimelineFullscreen onClose={handleClose} />}
+      {timelineFullscreen && (
+        <TimelineFullscreen
+          initialScroll={savedScrollPos.current}
+          onClose={handleClose}
+        />
+      )}
     </>
   );
 }
