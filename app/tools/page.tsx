@@ -16,7 +16,7 @@ const tools = [
     description:
       "Join code files from a local repo, prepend a prompt, and output a single context-ready block for any LLM. Smart Select uses Ollama + Qwen to auto-pick relevant files.",
     demonstrates: ["Ollama / Qwen", "File tree", "AI integration", "DB"],
-    mediumUrl: undefined,
+    mediumUrl: "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-because-free-claude-has-a-limit-a711db0d8932",
   },
   {
     href: "/tools/chatbot",
@@ -24,7 +24,7 @@ const tools = [
     description:
       "Chat with a local LLM via Ollama. Sessions saved to DB, 100 message cap per session, 10 sessions max.",
     demonstrates: ["Ollama", "Streaming", "Local LLM", "DB"],
-    mediumUrl: undefined,
+    mediumUrl: "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-because-free-claude-has-a-limit-a711db0d8932",
   },
 ];
 
