@@ -253,25 +253,26 @@ function ToolGrid() {
   );
 }
 
+const ACTIVE_TOOL_SLOTS = TOOL_SLOTS.filter((t) => t.active);
+
 function ToolGridMobile() {
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-3 gap-2">
-        {TOOL_SLOTS.map((t, i) => {
+        {ACTIVE_TOOL_SLOTS.map((t, i) => {
           const inner = (
             <div
               className="flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 transition-all duration-150"
               style={{
-                background: t.active ? "var(--surface)" : "var(--bg)",
+                background: "var(--surface)",
                 borderColor: "var(--border)",
-                color: t.active ? "var(--accent)" : "var(--muted)",
-                opacity: t.active ? 1 : 0.4,
+                color: "var(--accent)",
               }}
             >
               <ToolIcon type={t.icon} size={20} />
               <span
                 style={{
-                  color: t.active ? "var(--secondary)" : "var(--muted)",
+                  color: "var(--secondary)",
                   fontSize: 10,
                   fontFamily: "monospace",
                   textAlign: "center",
@@ -280,16 +281,14 @@ function ToolGridMobile() {
                   paddingRight: 2,
                 }}
               >
-                {t.active ? t.label : "Soon"}
+                {t.label}
               </span>
             </div>
           );
-          return t.href ? (
-            <Link key={i} href={t.href} style={{ display: "block" }}>
+          return (
+            <Link key={i} href={t.href!} style={{ display: "block" }}>
               {inner}
             </Link>
-          ) : (
-            <div key={i}>{inner}</div>
           );
         })}
       </div>

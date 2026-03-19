@@ -28,16 +28,13 @@ export default function ToolsLayout({
       pathname !== "/tools");
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ height: "calc(100vh - 3.5rem)", overflow: "hidden" }}
-    >
+    <>
       <div
-        className="flex flex-1 min-h-0"
-        style={{ height: isHistory ? "auto" : "calc(100vh - 3.5rem)" }}
+        className="hidden sm:flex"
+        style={{ height: "calc(100vh - 3.5rem)", overflow: "hidden" }}
       >
         <div
-          className="hidden sm:flex flex-col flex-shrink-0 pt-6 pb-4 px-3 gap-1"
+          className="flex flex-col flex-shrink-0 pt-6 pb-4 px-3 gap-1"
           style={{
             width: open ? SIDEBAR_WIDTH : 0,
             minWidth: open ? SIDEBAR_WIDTH : 0,
@@ -74,7 +71,7 @@ export default function ToolsLayout({
 
         <button
           onClick={() => setOpen((v) => !v)}
-          className="hidden sm:flex fixed top-1/2 -translate-y-1/2 z-50 items-center justify-center flex-shrink-0"
+          className="fixed top-1/2 -translate-y-1/2 z-50 flex items-center justify-center flex-shrink-0"
           style={{
             left: open ? SIDEBAR_WIDTH : 0,
             width: TAB_WIDTH,
@@ -98,7 +95,7 @@ export default function ToolsLayout({
         </button>
 
         <div
-          className="flex-1 min-w-0 px-4 sm:px-6 py-6 flex flex-col"
+          className="flex-1 min-w-0 px-6 py-6 flex flex-col"
           style={{
             marginLeft: TAB_WIDTH,
             overflow: isHistory ? "auto" : "hidden",
@@ -107,6 +104,13 @@ export default function ToolsLayout({
           {children}
         </div>
       </div>
-    </div>
+
+      <div
+        className="sm:hidden flex flex-col"
+        style={{ height: "calc(100vh - 3.5rem)" }}
+      >
+        {children}
+      </div>
+    </>
   );
 }

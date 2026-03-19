@@ -125,38 +125,24 @@ function ApplyButton({
 
 function UnauthenticatedBanner({ hasMessages }: { hasMessages: boolean }) {
   return (
-    <div className="space-y-2 flex-shrink-0">
-      <div
-        className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap"
-        style={{
-          background: "rgba(239,68,68,0.08)",
-          border: "1px solid rgba(239,68,68,0.4)",
-        }}
+    <div
+      className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap flex-shrink-0"
+      style={{
+        background: "var(--accent-dim)",
+        border: "1px solid var(--accent)",
+      }}
+    >
+      <p className="text-xs font-mono" style={{ color: "var(--accent)" }}>
+        {hasMessages
+          ? "You're not signed in — your chat is tied to your IP."
+          : "Sign in to keep your chat history privately."}
+      </p>
+      <button
+        onClick={() => signIn("google")}
+        className="btn-primary text-xs py-1 px-3 flex-shrink-0"
       >
-        <p className="text-xs font-mono" style={{ color: "rgb(239,68,68)" }}>
-          Demo mode — do not enter sensitive information. Sessions are stored by
-          IP and visible to anyone with the session ID.
-        </p>
-      </div>
-      <div
-        className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap"
-        style={{
-          background: "var(--accent-dim)",
-          border: "1px solid var(--accent)",
-        }}
-      >
-        <p className="text-xs font-mono" style={{ color: "var(--accent)" }}>
-          {hasMessages
-            ? "You're not signed in — your chat is tied to your IP."
-            : "Sign in to keep your chat history privately."}
-        </p>
-        <button
-          onClick={() => signIn("google")}
-          className="btn-primary text-xs py-1 px-3 flex-shrink-0"
-        >
-          Sign in with Google
-        </button>
-      </div>
+        Sign in with Google
+      </button>
     </div>
   );
 }

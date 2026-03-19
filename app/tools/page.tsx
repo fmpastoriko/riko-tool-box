@@ -16,7 +16,8 @@ const tools = [
     description:
       "Join code files from a local repo, prepend a prompt, and output a single context-ready block for any LLM. Smart Select uses Ollama + Qwen to auto-pick relevant files.",
     demonstrates: ["Ollama / Qwen", "File tree", "AI integration", "DB"],
-    mediumUrl: "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-because-free-claude-has-a-limit-a711db0d8932",
+    mediumUrl:
+      "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-because-free-claude-has-a-limit-a711db0d8932",
   },
   {
     href: "/tools/chatbot",
@@ -24,14 +25,15 @@ const tools = [
     description:
       "Chat with a local LLM via Ollama. Sessions saved to DB, 100 message cap per session, 10 sessions max.",
     demonstrates: ["Ollama", "Streaming", "Local LLM", "DB"],
-    mediumUrl: "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-because-free-claude-has-a-limit-a711db0d8932",
+    mediumUrl:
+      "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-because-free-claude-has-a-limit-a711db0d8932",
   },
 ];
 
 export default function ToolsPage() {
   return (
-    <div className="px-4 sm:px-6 py-12 sm:py-16">
-      <div className="mb-8">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 px-4 sm:px-0 pt-4 sm:pt-0 pb-4">
         <p className="section-label">Toolbox</p>
         <h1
           className="text-2xl sm:text-3xl font-bold"
@@ -47,10 +49,12 @@ export default function ToolsPage() {
           behind each one.
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        {tools.map((tool) => (
-          <ToolCard key={tool.href} {...tool} />
-        ))}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-0 pb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          {tools.map((tool) => (
+            <ToolCard key={tool.href} {...tool} />
+          ))}
+        </div>
       </div>
     </div>
   );
