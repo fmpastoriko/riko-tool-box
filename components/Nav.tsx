@@ -31,7 +31,10 @@ const shared =
   "inline-flex items-center font-sans font-medium text-sm leading-none rounded-lg transition-all duration-150 whitespace-nowrap";
 
 const DEMO_MSG =
-  "Demo mode — do not enter sensitive information. Sessions are stored by IP and visible to anyone with the session ID.";
+  "Demo mode: Do not enter sensitive information. Sessions are stored by IP and visible to anyone with the session ID.";
+
+const DEMO_MSG_PHONE =
+  "Demo mode: Don't enter sensitive info.";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -118,7 +121,7 @@ export default function Nav() {
           }}
         >
           <p className="text-xs font-mono" style={{ color: "rgb(239,68,68)" }}>
-            {DEMO_MSG}
+            {DEMO_MSG_PHONE}
           </p>
         </div>
       )}
