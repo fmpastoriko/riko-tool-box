@@ -52,7 +52,7 @@ HISTORY_SECRET_HASH=
 
 # Groq API keys
 OWNER_GROQ_API_KEY=
-PUBLIC_GROQ_API_KEY=
+GROQ_API_KEY_PUBLIC=
 
 # Groq models (optional — defaults to llama-3.3-70b-versatile)
 GROQ_CHAT_MODEL=llama-3.3-70b-versatile
@@ -162,7 +162,7 @@ One Neon project. Owner data is encrypted at rest (AES-256-GCM). Unauthenticated
 | Key | Env var | Used for |
 |---|---|---|
 | Owner key | `OWNER_GROQ_API_KEY` | Owner requests |
-| Public key | `PUBLIC_GROQ_API_KEY` | Unauthenticated requests |
+| Public key | `GROQ_API_KEY_PUBLIC` | Unauthenticated requests |
 
 ### Auth roles
 

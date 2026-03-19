@@ -23,7 +23,7 @@ export function getGroqKeys(isOwner: boolean): string[] {
     }
     return keys;
   }
-  const key = process.env.PUBLIC_GROQ_API_KEY;
+  const key = process.env.GROQ_API_KEY_PUBLIC;
   return key ? [key] : [];
 }
 

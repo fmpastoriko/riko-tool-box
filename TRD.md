@@ -147,7 +147,7 @@ A two-part banner is always shown when unauthenticated: a red warning about IP-s
 
 | Resource | Owner env var | Public env var |
 |---|---|---|
-| Groq API key | `OWNER_GROQ_API_KEY` | `PUBLIC_GROQ_API_KEY` |
+| Groq API key | `OWNER_GROQ_API_KEY` | `GROQ_API_KEY_PUBLIC` |
 
 ---
 
@@ -183,7 +183,7 @@ AES-256-GCM. IV (12 bytes) + auth tag (16 bytes) + ciphertext stored together as
 
 ### lib/llm.ts
 
-Unified LLM client. If `OLLAMA_URL` is set, Ollama is used. Otherwise falls back to Groq, using `OWNER_GROQ_API_KEY` or `PUBLIC_GROQ_API_KEY` based on auth state.
+Unified LLM client. If `OLLAMA_URL` is set, Ollama is used. Otherwise falls back to Groq, using `OWNER_GROQ_API_KEY` or `GROQ_API_KEY_PUBLIC` based on auth state.
 
 ### lib/rateLimit.ts
 
