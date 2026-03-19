@@ -6,6 +6,7 @@ import Link from "next/link";
 
 const TOOLS = [
   { href: "/tools/text-compare", icon: "⇄", label: "Text Compare" },
+  { href: "/tools/code-briefer", icon: "📋", label: "Code Briefer" },
   { href: "/tools", icon: "⊞", label: "Open All Tools" },
 ];
 
@@ -67,7 +68,6 @@ function TimelineFullscreen({
     };
   }, []);
 
-  // Restore scroll position on mount
   useEffect(() => {
     if (scrollRef.current && initialScroll > 0) {
       scrollRef.current.scrollTop = initialScroll;
@@ -149,7 +149,6 @@ export default function HomePage() {
   const touchStartY = useRef(0);
   const savedScrollPos = useRef(0);
 
-  // Sync preview scroll position whenever savedScrollPos changes
   useEffect(() => {
     if (!timelineFullscreen && previewRef.current) {
       previewRef.current.scrollTop = savedScrollPos.current;
@@ -186,7 +185,6 @@ export default function HomePage() {
 
   return (
     <>
-      {/* ── DESKTOP ─────────────────────────────────────────── */}
       <div
         className="hidden sm:flex flex-col max-w-6xl mx-auto px-6 py-6"
         style={{ height: "calc(100vh - 56px - 36px)" }}
@@ -240,7 +238,6 @@ export default function HomePage() {
         </section>
       </div>
 
-      {/* ── MOBILE ──────────────────────────────────────────── */}
       <div
         className="sm:hidden flex flex-col max-w-6xl mx-auto px-4 py-4"
         style={{ height: "calc(100vh - 56px)" }}

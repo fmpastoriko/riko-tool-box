@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import AuthButton from "./AuthButton";
 
 const internalLinks = [
   { href: "/", label: "Home" },
@@ -41,20 +42,16 @@ export default function Nav() {
       className="sticky top-0 z-50 border-b"
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-2">
+      <div className="w-full px-4 sm:px-6 h-14 flex items-center gap-2">
         <Link
           href="/"
-          className="font-mono text-sm font-semibold hidden sm:block flex-shrink-0"
+          className="font-mono text-sm font-semibold hidden sm:block flex-shrink-0 mr-2"
           style={{ color: "var(--primary)" }}
         >
           riko.toolbox
         </Link>
-
-        {/* spacer: desktop only */}
-        <div className="hidden sm:block flex-1" />
-
-        {/* internal links — flex-1 on mobile pushes everything else right */}
-        <div className="flex items-center gap-0.5 sm:gap-1 flex-1 sm:flex-none">
+        <div className="flex-1" />
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {internalLinks.map((l) => (
             <Link
               key={l.href}
@@ -69,8 +66,6 @@ export default function Nav() {
             </Link>
           ))}
         </div>
-
-        {/* external links */}
         <div className="flex items-center gap-0.5 sm:gap-1">
           {externalLinks.map((l) => {
             const vis = l.mobileHidden
@@ -100,7 +95,7 @@ export default function Nav() {
             );
           })}
         </div>
-
+        <AuthButton />
         <ThemeToggle />
       </div>
     </nav>

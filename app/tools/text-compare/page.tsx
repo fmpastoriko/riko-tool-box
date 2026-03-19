@@ -3,7 +3,6 @@ import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { diffLines, diffChars, type Change } from "diff";
 import Link from "next/link";
-import Footer from "@/components/Footer";
 
 type Side = {
   text: string;
@@ -115,6 +114,7 @@ function DiffRow({ leftSide, rightSide }: { leftSide: Side; rightSide: Side }) {
         : { left: [], right: [] },
     [bothChanged, leftSide?.text, rightSide?.text],
   );
+
   function renderCell(side: Side, spans: Span[], isLeft: boolean) {
     if (!side)
       return (
@@ -182,6 +182,7 @@ function DiffRow({ leftSide, rightSide }: { leftSide: Side; rightSide: Side }) {
       </div>
     );
   }
+
   return (
     <div
       className="grid"
@@ -254,18 +255,17 @@ function TextCompareInner() {
   }, [left, right]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-5">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="flex-1 flex flex-col min-h-0 gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
         <div>
           <h1
-            className="text-2xl sm:text-3xl font-bold"
+            className="text-2xl font-bold"
             style={{ color: "var(--primary)" }}
           >
             Text Compare
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-            Myers diff (jsdiff) — side-by-side with inline character
-            highlighting.{" "}
+            Myers diff — side-by-side with inline character highlighting.{" "}
             <a
               href="https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c"
               target="_blank"
@@ -273,7 +273,7 @@ function TextCompareInner() {
               style={{ color: "var(--accent)" }}
               className="underline"
             >
-              Read why I built this ↗
+              Read why ↗
             </a>
           </p>
         </div>
@@ -296,7 +296,7 @@ function TextCompareInner() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-shrink-0">
         {(
           [
             {
@@ -321,7 +321,7 @@ function TextCompareInner() {
               {label}
             </p>
             <textarea
-              className="input-base h-40 sm:h-52"
+              className="input-base h-36"
               placeholder={placeholder}
               value={value}
               onChange={(e) => set(e.target.value)}
@@ -331,8 +331,8 @@ function TextCompareInner() {
       </div>
 
       {changes.length > 0 && (
-        <>
-          <div className="flex justify-end">
+        <div className="flex-1 flex flex-col min-h-0 gap-2">
+          <div className="flex justify-end flex-shrink-0">
             <div className="flex gap-1.5">
               {(["split", "unified"] as const).map((m) => (
                 <button
@@ -351,18 +351,17 @@ function TextCompareInner() {
               ))}
             </div>
           </div>
-
           <div
-            className="rounded-xl overflow-hidden"
+            className="flex-1 rounded-xl overflow-hidden flex flex-col min-h-0"
             style={{
               border: "1px solid var(--border)",
               background: "var(--surface)",
             }}
           >
             {mode === "split" ? (
-              <div className="overflow-x-auto">
+              <div className="flex-1 overflow-auto">
                 <div
-                  className="grid text-xs font-mono py-1.5 border-b"
+                  className="grid text-xs font-mono py-1.5 border-b sticky top-0"
                   style={{
                     gridTemplateColumns: "1fr 1fr",
                     borderColor: "var(--border)",
@@ -391,7 +390,7 @@ function TextCompareInner() {
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="flex-1 overflow-auto">
                 {changes.map((change, ci) => {
                   const lines = change.value.replace(/\n$/, "").split("\n");
                   const isAdded = !!change.added,
@@ -438,19 +437,17 @@ function TextCompareInner() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {!left && !right && (
         <div
-          className="rounded-xl py-14 text-center text-sm"
+          className="flex-1 rounded-xl flex items-center justify-center text-sm"
           style={{ border: "1px dashed var(--border)", color: "var(--muted)" }}
         >
           Paste text in both panels to see the diff
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }

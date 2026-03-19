@@ -1,0 +1,415 @@
+"use client";
+import { useState, useEffect, useMemo } from "react";
+import { formatSize, estimateTokens } from "@/lib/fileUtils";
+
+export const DEFAULT_EXTS = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".py",
+  ".vue",
+];
+
+export const EXT_GROUPS = [
+  { label: "Python", exts: [".py"] },
+  { label: "React / Node", exts: [".tsx", ".ts", ".jsx", ".js", ".mjs"] },
+  { label: "Vue", exts: [".vue"] },
+  { label: "Shared", exts: [".css", ".sql", ".json", ".md", ".gitignore"] },
+];
+
+type FileEntry = { path: string; size: number };
+
+function FileTree({
+  files,
+  selected,
+  onToggle,
+  locked,
+}: {
+  files: FileEntry[];
+  selected: Set<string>;
+  onToggle: (p: string) => void;
+  locked: Set<string>;
+}) {
+  const grouped = useMemo(() => {
+    const dirs = new Map<string, FileEntry[]>();
+    for (const f of files) {
+      const dir = f.path.includes("/")
+        ? f.path.split("/").slice(0, -1).join("/")
+        : "(root)";
+      if (!dirs.has(dir)) dirs.set(dir, []);
+      dirs.get(dir)!.push(f);
+    }
+    return dirs;
+  }, [files]);
+
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  function toggleDir(dir: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(dir) ? next.delete(dir) : next.add(dir);
+      return next;
+    });
+  }
+
+  if (files.length === 0) {
+    return (
+      <div
+        className="text-xs font-mono py-8 text-center"
+        style={{ color: "var(--muted)" }}
+      >
+        No files match current filters
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {Array.from(grouped.entries()).map(([dir, dirFiles]) => (
+        <div key={dir}>
+          <button
+            onClick={() => toggleDir(dir)}
+            className="w-full text-left flex items-center gap-1.5 px-1 py-0.5 rounded text-xs font-mono transition-colors"
+            style={{ color: "var(--muted)" }}
+          >
+            <span>{collapsed.has(dir) ? "▶" : "▼"}</span>
+            <span>{dir}/</span>
+            <span className="ml-auto" style={{ color: "var(--border)" }}>
+              {dirFiles.filter((f) => selected.has(f.path)).length}/
+              {dirFiles.length}
+            </span>
+          </button>
+          {!collapsed.has(dir) && (
+            <div className="ml-3 space-y-0.5">
+              {dirFiles.map((f) => {
+                const isSelected = selected.has(f.path);
+                const isLocked = locked.has(f.path);
+                return (
+                  <button
+                    key={f.path}
+                    onClick={() => onToggle(f.path)}
+                    disabled={isLocked}
+                    className="w-full text-left flex items-center gap-2 px-2 py-0.5 rounded text-xs font-mono transition-all"
+                    style={{
+                      background: isSelected
+                        ? "var(--accent-dim)"
+                        : "transparent",
+                      color: isSelected ? "var(--primary)" : "var(--secondary)",
+                      cursor: isLocked ? "default" : "pointer",
+                    }}
+                  >
+                    <span
+                      className="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center"
+                      style={{
+                        borderColor: isSelected
+                          ? "var(--accent)"
+                          : "var(--border)",
+                        background: isSelected
+                          ? "var(--accent)"
+                          : "transparent",
+                      }}
+                    >
+                      {isSelected && (
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                          <path
+                            d="M1 4l2 2 4-4"
+                            stroke="#fff"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="flex-1 truncate">
+                      {f.path.split("/").pop()}
+                    </span>
+                    {isLocked && (
+                      <span
+                        className="text-xs"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        🔒
+                      </span>
+                    )}
+                    <span style={{ color: "var(--muted)" }}>
+                      {formatSize(f.size)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface RepoFileTreeProps {
+  repoPath: string;
+  onInject: (
+    files: { path: string; content: string }[],
+    tokenCount: number,
+  ) => void;
+  onClose: () => void;
+  injectLabel?: string;
+  initialSelected?: Set<string>;
+}
+
+export default function RepoFileTree({
+  repoPath,
+  onInject,
+  onClose,
+  injectLabel = "Inject Context",
+  initialSelected = new Set(),
+}: RepoFileTreeProps) {
+  const [allFiles, setAllFiles] = useState<FileEntry[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(
+    new Set(initialSelected),
+  );
+  const [enabledExts, setEnabledExts] = useState<Set<string>>(
+    new Set(DEFAULT_EXTS),
+  );
+  const [customExts, setCustomExts] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [injecting, setInjecting] = useState(false);
+  const [error, setError] = useState("");
+
+  const activeExts = useMemo(() => {
+    const extras = customExts
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean)
+      .map((e) => (e.startsWith(".") ? e : `.${e}`));
+    return new Set([...enabledExts, ...extras]);
+  }, [enabledExts, customExts]);
+
+  const filteredFiles = useMemo(
+    () =>
+      allFiles.filter((f) => {
+        const ext = "." + f.path.split(".").pop()!.toLowerCase();
+        return activeExts.has(ext);
+      }),
+    [allFiles, activeExts],
+  );
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch("/api/context/files", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repoPath }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          setError(data.error);
+          return;
+        }
+        setAllFiles(data.files ?? []);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [repoPath]);
+
+  function toggleFile(p: string) {
+    if (initialSelected.has(p)) return;
+    setSelectedFiles((prev) => {
+      const next = new Set(prev);
+      next.has(p) ? next.delete(p) : next.add(p);
+      return next;
+    });
+  }
+
+  function toggleExt(ext: string) {
+    setEnabledExts((prev) => {
+      const next = new Set(prev);
+      next.has(ext) ? next.delete(ext) : next.add(ext);
+      return next;
+    });
+  }
+
+  async function handleInject() {
+    if (selectedFiles.size === 0) return;
+    setInjecting(true);
+    try {
+      const res = await fetch("/api/context/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repoPath,
+          filePaths: Array.from(selectedFiles),
+        }),
+      });
+      const data = await res.json();
+      const files: { path: string; content: string }[] = (
+        data.files ?? []
+      ).filter((f: { skipped?: boolean }) => !f.skipped);
+      const tokenCount = estimateTokens(files.map((f) => f.content).join("\n"));
+      onInject(files, tokenCount);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setInjecting(false);
+    }
+  }
+
+  const tokenEstimate = useMemo(
+    () => selectedFiles.size * 800,
+    [selectedFiles.size],
+  );
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9000,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 16,
+          width: "100%",
+          maxWidth: 480,
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+          padding: "1.25rem",
+          gap: "0.75rem",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="section-label mb-0">Select Files</p>
+          <button
+            onClick={onClose}
+            className="text-xs font-mono px-3 py-1 rounded-lg"
+            style={{ background: "var(--border)", color: "var(--secondary)" }}
+          >
+            ✕ close
+          </button>
+        </div>
+        {error && (
+          <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
+            {error}
+          </p>
+        )}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+              Extensions
+            </p>
+            <input
+              type="text"
+              className="input-base"
+              style={{
+                width: 120,
+                height: 24,
+                padding: "2px 8px",
+                fontSize: 11,
+              }}
+              placeholder=".go, .rs"
+              value={customExts}
+              onChange={(e) => setCustomExts(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {EXT_GROUPS.flatMap((g) => g.exts).map((ext) => (
+              <button
+                key={ext}
+                onClick={() => toggleExt(ext)}
+                className="text-xs font-mono px-1.5 py-0.5 rounded border transition-all"
+                style={{
+                  borderColor: enabledExts.has(ext)
+                    ? "var(--accent)"
+                    : "var(--border)",
+                  background: enabledExts.has(ext)
+                    ? "var(--accent-dim)"
+                    : "transparent",
+                  color: enabledExts.has(ext)
+                    ? "var(--accent)"
+                    : "var(--muted)",
+                }}
+              >
+                {ext}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+            {selectedFiles.size}/{filteredFiles.length} selected
+          </span>
+          <button
+            onClick={() => {
+              if (selectedFiles.size === filteredFiles.length) {
+                setSelectedFiles(new Set());
+              } else {
+                setSelectedFiles(new Set(filteredFiles.map((f) => f.path)));
+              }
+            }}
+            className="text-xs font-mono px-2 py-0.5 rounded border"
+            style={{ borderColor: "var(--border)", color: "var(--secondary)" }}
+          >
+            {selectedFiles.size === filteredFiles.length ? "none" : "all"}
+          </button>
+        </div>
+        <div
+          className="flex-1 overflow-y-auto min-h-0"
+          style={{ maxHeight: 320 }}
+        >
+          {loading ? (
+            <p
+              className="text-xs font-mono text-center py-8"
+              style={{ color: "var(--muted)" }}
+            >
+              Scanning…
+            </p>
+          ) : (
+            <FileTree
+              files={filteredFiles}
+              selected={selectedFiles}
+              onToggle={toggleFile}
+              locked={initialSelected}
+            />
+          )}
+        </div>
+        <div
+          className="flex items-center justify-between pt-1 border-t"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+            {selectedFiles.size > 0 &&
+              `~${(tokenEstimate / 1000).toFixed(1)}k tokens est.`}
+          </span>
+          <button
+            onClick={handleInject}
+            disabled={selectedFiles.size === 0 || injecting}
+            className="btn-primary text-sm"
+            style={{ opacity: selectedFiles.size === 0 ? 0.5 : 1 }}
+          >
+            {injecting ? "Loading…" : injectLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

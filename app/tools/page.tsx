@@ -1,5 +1,4 @@
 import ToolCard from "@/components/ToolCard";
-import Footer from "@/components/Footer";
 
 const tools = [
   {
@@ -10,6 +9,22 @@ const tools = [
     demonstrates: ["Myers diff", "jsdiff", "Save & Share", "DB"],
     mediumUrl:
       "https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c",
+  },
+  {
+    href: "/tools/code-briefer",
+    title: "Code Briefer",
+    description:
+      "Join code files from a local repo, prepend a prompt, and output a single context-ready block for any LLM. Smart Select uses Ollama + Qwen to auto-pick relevant files.",
+    demonstrates: ["Ollama / Qwen", "File tree", "AI integration", "DB"],
+    mediumUrl: undefined,
+  },
+  {
+    href: "/tools/chatbot",
+    title: "Chatbot",
+    description:
+      "Chat with a local LLM via Ollama. Sessions saved to DB, 100 message cap per session, 10 sessions max.",
+    demonstrates: ["Ollama", "Streaming", "Local LLM", "DB"],
+    mediumUrl: undefined,
   },
 ];
 
@@ -37,7 +52,6 @@ export default function ToolsPage() {
           <ToolCard key={tool.href} {...tool} />
         ))}
       </div>
-      <Footer />
     </div>
   );
 }

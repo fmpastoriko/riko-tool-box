@@ -1,49 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import sql from "@/lib/db";
-import { createHash } from "crypto";
-
-function sha256(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function obfuscateText(text: string, index: number, side: "a" | "b"): string {
-  const lines = text.split("\n").length;
-  const words = text.split(/\s+/).filter(Boolean).length;
-  return `text_${index}_${side} · ${lines} line${lines !== 1 ? "s" : ""} · ${words} word${words !== 1 ? "s" : ""}`;
-}
-
-function obfuscateId(index: number): string {
-  return `comparison_${index + 1}`;
-}
+import { neonDb } from "@/lib/db";
+import { getServerRole, isOwnerRole } from "@/lib/session";
+import { decrypt } from "@/lib/encrypt";
+import { sha256 } from "@/lib/auth";
+import { getIp } from "@/lib/ip";
 
 export async function GET(req: NextRequest) {
   try {
-    const secret = req.headers.get("x-history-secret") ?? "";
-    const serverHash = process.env.HISTORY_SECRET_HASH ?? "";
-    const authenticated = serverHash !== "" && sha256(secret) === serverHash;
+    const role = await getServerRole();
+    const owner = isOwnerRole(role);
+    const hashedIp = sha256(getIp(req));
 
-    const rows = await sql`
-      SELECT id, text_a, text_b, created_at
+    const rows = await neonDb`
+      SELECT id, text_a, text_b, created_at, hashed_ip
       FROM comparisons
       ORDER BY created_at DESC
       LIMIT 100
     `;
 
-    if (authenticated) {
-      return NextResponse.json({ authenticated: true, comparisons: rows });
-    }
+    const comparisons = rows.map((row) => {
+      const isOwn = owner || row.hashed_ip === hashedIp;
+      if (isOwn) {
+        return {
+          id: row.id,
+          text_a: owner
+            ? decrypt(row.text_a as string)
+            : (row.text_a as string),
+          text_b: owner
+            ? decrypt(row.text_b as string)
+            : (row.text_b as string),
+          created_at: row.created_at,
+          is_own: true,
+        };
+      }
+      return {
+        id: row.id,
+        text_a: "···",
+        text_b: "···",
+        created_at: row.created_at,
+        is_own: false,
+      };
+    });
 
-    const obfuscated = rows.map((row, i) => ({
-      id: obfuscateId(i),
-      text_a: obfuscateText(row.text_a as string, i + 1, "a"),
-      text_b: obfuscateText(row.text_b as string, i + 1, "b"),
-      created_at: row.created_at,
-      lines_added: (row.text_b as string).split("\n").length,
-      lines_removed: (row.text_a as string).split("\n").length,
-    }));
-
-    return NextResponse.json({ authenticated: false, comparisons: obfuscated });
+    return NextResponse.json({ authenticated: owner, comparisons });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

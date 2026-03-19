@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
 import { LightboxProvider } from "@/lib/lightbox";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Riko's Toolbox",
@@ -29,12 +29,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-screen">
-        <LightboxProvider>
-          <Nav />
-          <main className="pb-8">{children}</main>
-          <Footer />
-        </LightboxProvider>
+      <body suppressHydrationWarning className="min-h-screen flex flex-col">
+        <Providers>
+          <LightboxProvider>
+            <Nav />
+            <main className="flex-1 min-h-0">{children}</main>
+          </LightboxProvider>
+        </Providers>
       </body>
     </html>
   );

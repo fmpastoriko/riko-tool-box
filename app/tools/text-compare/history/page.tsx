@@ -1,130 +1,83 @@
 "use client";
-import { useState, useCallback } from "react";
-import Footer from "@/components/Footer";
+import { useState, useEffect } from "react";
+import { formatDate } from "@/lib/formatDate";
 
 interface Comparison {
   id: string;
   text_a: string;
   text_b: string;
   created_at: string;
-  lines_added?: number;
-  lines_removed?: number;
+  is_own: boolean;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function TextPreview({ text, label }: { text: string; label: string }) {
-  const lines = text.split("\n").slice(0, 4);
-  const truncated = text.split("\n").length > 4;
+function TextPreview({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const truncated = lines.slice(0, 3).join("\n");
   return (
-    <div className="min-w-0 flex-1">
-      <p className="text-xs font-mono mb-1" style={{ color: "var(--muted)" }}>
-        {label}
-      </p>
-      <div
-        className="rounded-lg p-2 font-mono text-xs leading-relaxed overflow-hidden"
-        style={{
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          color: "var(--secondary)",
-        }}
-      >
-        {lines.map((line, i) => (
-          <div key={i} className="truncate">
-            {line || " "}
-          </div>
-        ))}
-        {truncated && <div style={{ color: "var(--muted)" }}>…</div>}
-      </div>
-    </div>
+    <pre
+      className="text-xs font-mono p-2 rounded-lg"
+      style={{
+        background: "var(--bg)",
+        border: "1px solid var(--border)",
+        color: "var(--secondary)",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}
+    >
+      {truncated}
+      {lines.length > 3 && (
+        <span style={{ color: "var(--muted)" }}>
+          {"\n"}…{lines.length - 3} more line(s)
+        </span>
+      )}
+    </pre>
   );
 }
 
-export default function HistoryPage() {
-  const [secret, setSecret] = useState("");
+export default function TextCompareHistoryPage() {
   const [comparisons, setComparisons] = useState<Comparison[] | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const load = useCallback(async (key: string) => {
+  useEffect(() => {
     setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/compare/history", {
-        headers: key ? { "x-history-secret": key } : {},
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setComparisons(data.comparisons);
-      setAuthenticated(data.authenticated);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
+    fetch("/api/compare/history")
+      .then((r) => r.json())
+      .then((data) => {
+        setComparisons(data.comparisons);
+        setAuthenticated(data.authenticated);
+      })
+      .catch((e) => setError(String(e)))
+      .finally(() => setLoading(false));
   }, []);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    load(secret);
-  }
-
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-8">
+    <div className="space-y-8">
       <div>
         <h1
           className="text-2xl sm:text-3xl font-bold"
           style={{ color: "var(--primary)" }}
         >
-          Comparison History
+          Text Compare History
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-          All comparisons are auto-saved. Enter the secret key to view full
-          content.
+          All comparisons are auto-saved.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="card flex gap-3 items-end flex-wrap">
-          <div className="flex-1 min-w-48">
-            <label
-              className="text-xs font-mono block mb-1"
-              style={{ color: "var(--muted)" }}
-            >
-              Secret key (optional — leave empty to preview)
-            </label>
-            <input
-              type="password"
-              placeholder="Enter secret key…"
-              value={secret}
-              onChange={(e) => setSecret(e.target.value)}
-              className="input-base"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary whitespace-nowrap"
-          >
-            {loading ? "Loading…" : comparisons ? "Refresh" : "View History"}
-          </button>
-        </div>
-        {error && (
-          <p className="text-xs mt-2" style={{ color: "rgb(239,68,68)" }}>
-            {error}
-          </p>
-        )}
-      </form>
+      {loading && (
+        <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+          Loading…
+        </p>
+      )}
+
+      {error && (
+        <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
+          {error}
+        </p>
+      )}
 
       {comparisons && (
         <div className="flex items-center gap-2">
@@ -151,7 +104,7 @@ export default function HistoryPage() {
                 className="text-xs font-mono"
                 style={{ color: "var(--muted)" }}
               >
-                Preview mode — content obfuscated
+                Showing your comparisons — others are hidden
               </span>
             </>
           )}
@@ -182,11 +135,15 @@ export default function HistoryPage() {
               style={{
                 borderColor:
                   expanded === c.id ? "var(--accent)" : "var(--border)",
+                opacity: c.is_own ? 1 : 0.4,
               }}
             >
               <button
-                onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                onClick={() =>
+                  c.is_own && setExpanded(expanded === c.id ? null : c.id)
+                }
                 className="w-full text-left flex items-center gap-4 flex-wrap"
+                disabled={!c.is_own}
               >
                 <span
                   className="font-mono text-xs px-2 py-0.5 rounded"
@@ -195,46 +152,52 @@ export default function HistoryPage() {
                     color: "var(--secondary)",
                   }}
                 >
-                  {c.id}
+                  {c.id.slice(0, 8)}…
                 </span>
                 <span className="text-xs" style={{ color: "var(--muted)" }}>
                   {formatDate(c.created_at)}
                 </span>
-                <div className="flex gap-3 ml-auto text-xs font-mono">
-                  <span style={{ color: "rgb(239,68,68)" }}>
-                    {c.lines_removed ?? c.text_a.split("\n").length}L original
-                  </span>
-                  <span style={{ color: "rgb(34,197,94)" }}>
-                    {c.lines_added ?? c.text_b.split("\n").length}L modified
-                  </span>
-                </div>
-                <span className="text-xs" style={{ color: "var(--muted)" }}>
-                  {expanded === c.id ? "▲" : "▼"}
-                </span>
-              </button>
-
-              {expanded === c.id && (
-                <div className="mt-4 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <TextPreview text={c.text_a} label="Original" />
-                    <TextPreview text={c.text_b} label="Modified" />
-                  </div>
-                  {authenticated && (
-                    <a
-                      href={`/tools/text-compare?a=${encodeURIComponent(c.text_a)}&b=${encodeURIComponent(c.text_b)}`}
-                      className="btn-ghost inline-flex text-xs"
+                {c.is_own && (
+                  <>
+                    <span
+                      className="text-xs font-mono ml-auto"
+                      style={{ color: "var(--muted)" }}
                     >
-                      Open in Text Compare →
-                    </a>
-                  )}
+                      {c.text_a.split("\n").length} /{" "}
+                      {c.text_b.split("\n").length} lines
+                    </span>
+                    <span className="text-xs" style={{ color: "var(--muted)" }}>
+                      {expanded === c.id ? "▲" : "▼"}
+                    </span>
+                  </>
+                )}
+              </button>
+              {expanded === c.id && c.is_own && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <p
+                      className="text-xs font-mono mb-1"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      First Text
+                    </p>
+                    <TextPreview text={c.text_a} />
+                  </div>
+                  <div>
+                    <p
+                      className="text-xs font-mono mb-1"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      Second Text
+                    </p>
+                    <TextPreview text={c.text_b} />
+                  </div>
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }
