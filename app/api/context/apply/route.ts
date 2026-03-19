@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { isRepoAllowed, resolveFilePath } from "@/lib/repos";
 
-const IS_LOCAL = process.env.LOCAL === "true";
+const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
 
 const ALLOWED_WRITE_EXTS = new Set([
   ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",

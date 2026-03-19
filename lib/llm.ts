@@ -21,12 +21,10 @@ export function getGroqKeys(isOwner: boolean): string[] {
     if (keys.length === 0 && process.env.OWNER_GROQ_API_KEY) {
       keys.push(process.env.OWNER_GROQ_API_KEY);
     }
-    if (keys.length === 0) throw new Error("OWNER_GROQ_API_KEY is not set");
     return keys;
   }
   const key = process.env.PUBLIC_GROQ_API_KEY;
-  if (!key) throw new Error("PUBLIC_GROQ_API_KEY is not set");
-  return [key];
+  return key ? [key] : [];
 }
 
 export function getGroqKey(isOwner: boolean): string {
@@ -42,6 +40,10 @@ export function getOllamaUrl(): string {
   return OLLAMA_URL;
 }
 
+function hasOllama(model: string | undefined): boolean {
+  return !!OLLAMA_URL && !!model;
+}
+
 export function getChatModel(
   isOwner: boolean,
   keyIndex = 0,
@@ -50,15 +52,18 @@ export function getChatModel(
   model: string;
   apiKey?: string;
 } {
-  if (useOllama() && OLLAMA_CHAT_MODEL) {
-    return { provider: "ollama", model: OLLAMA_CHAT_MODEL };
-  }
   const keys = getGroqKeys(isOwner);
-  return {
-    provider: "groq",
-    model: process.env.GROQ_CHAT_MODEL ?? DEFAULT_GROQ_CHAT_MODEL,
-    apiKey: keys[keyIndex % keys.length],
-  };
+  if (keys.length > 0) {
+    return {
+      provider: "groq",
+      model: process.env.GROQ_CHAT_MODEL ?? DEFAULT_GROQ_CHAT_MODEL,
+      apiKey: keys[keyIndex % keys.length],
+    };
+  }
+  if (hasOllama(OLLAMA_CHAT_MODEL)) {
+    return { provider: "ollama", model: OLLAMA_CHAT_MODEL! };
+  }
+  throw new Error("No LLM configured: set GROQ API key or OLLAMA_URL");
 }
 
 export function getSmartSelectModel(
@@ -69,16 +74,19 @@ export function getSmartSelectModel(
   model: string;
   apiKey?: string;
 } {
-  if (useOllama() && OLLAMA_SMART_SELECT_MODEL) {
-    return { provider: "ollama", model: OLLAMA_SMART_SELECT_MODEL };
-  }
   const keys = getGroqKeys(isOwner);
-  return {
-    provider: "groq",
-    model:
-      process.env.GROQ_SMART_SELECT_MODEL ?? DEFAULT_GROQ_SMART_SELECT_MODEL,
-    apiKey: keys[keyIndex % keys.length],
-  };
+  if (keys.length > 0) {
+    return {
+      provider: "groq",
+      model:
+        process.env.GROQ_SMART_SELECT_MODEL ?? DEFAULT_GROQ_SMART_SELECT_MODEL,
+      apiKey: keys[keyIndex % keys.length],
+    };
+  }
+  if (hasOllama(OLLAMA_SMART_SELECT_MODEL)) {
+    return { provider: "ollama", model: OLLAMA_SMART_SELECT_MODEL! };
+  }
+  throw new Error("No LLM configured: set GROQ API key or OLLAMA_URL");
 }
 
 type ContentPart =
@@ -87,52 +95,45 @@ type ContentPart =
 
 type ChatMessage = { role: string; content: string | ContentPart[] };
 
-export async function streamChat(
+async function groqStreamRequest(
   messages: ChatMessage[],
-  isOwner: boolean,
-  modelOverride?: string,
+  model: string,
+  keys: string[],
   abortSignal?: AbortSignal,
-): Promise<ReadableStream> {
-  if (modelOverride) {
-    const keys = getGroqKeys(isOwner);
-    for (let i = 0; i < keys.length; i++) {
-      const res = await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${keys[i]}`,
-          },
-          body: JSON.stringify({
-            model: modelOverride,
-            messages,
-            stream: true,
-          }),
-          signal: abortSignal,
-        },
-      );
-      if (res.status === 429 && i < keys.length - 1) continue;
-      if (!res.ok || !res.body) throw new Error("Groq error");
-      return groqStream(res);
-    }
-    throw new Error("All Groq keys exhausted");
-  }
-
-  const cfg = getChatModel(isOwner);
-
-  if (cfg.provider === "ollama") {
-    const res = await fetch(`${getOllamaUrl()}/api/chat`, {
+): Promise<Response | null> {
+  for (let i = 0; i < keys.length; i++) {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: cfg.model,
-        stream: true,
-        options: { num_ctx: OLLAMA_CTX },
-        messages,
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${keys[i]}`,
+      },
+      body: JSON.stringify({ model, messages, stream: true }),
       signal: abortSignal,
     });
+    if (res.status === 429 && i < keys.length - 1) continue;
+    if (res.ok && res.body) return res;
+    return null;
+  }
+  return null;
+}
+
+function ollamaStream(
+  messages: ChatMessage[],
+  model: string,
+  abortSignal?: AbortSignal,
+): Promise<ReadableStream> {
+  return fetch(`${getOllamaUrl()}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      stream: true,
+      options: { num_ctx: OLLAMA_CTX },
+      messages,
+    }),
+    signal: abortSignal,
+  }).then((res) => {
     if (!res.ok || !res.body) throw new Error("Ollama error");
     return new ReadableStream({
       async start(controller) {
@@ -159,24 +160,29 @@ export async function streamChat(
         }
       },
     });
+  });
+}
+
+export async function streamChat(
+  messages: ChatMessage[],
+  isOwner: boolean,
+  modelOverride?: string,
+  abortSignal?: AbortSignal,
+): Promise<ReadableStream> {
+  const keys = getGroqKeys(isOwner);
+  const groqModel =
+    modelOverride ?? process.env.GROQ_CHAT_MODEL ?? DEFAULT_GROQ_CHAT_MODEL;
+
+  if (keys.length > 0) {
+    const res = await groqStreamRequest(messages, groqModel, keys, abortSignal);
+    if (res) return groqStream(res);
   }
 
-  const keys = getGroqKeys(isOwner);
-  for (let i = 0; i < keys.length; i++) {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${keys[i]}`,
-      },
-      body: JSON.stringify({ model: cfg.model, messages, stream: true }),
-      signal: abortSignal,
-    });
-    if (res.status === 429 && i < keys.length - 1) continue;
-    if (!res.ok || !res.body) throw new Error("Groq error");
-    return groqStream(res);
+  if (hasOllama(OLLAMA_CHAT_MODEL)) {
+    return ollamaStream(messages, OLLAMA_CHAT_MODEL!, abortSignal);
   }
-  throw new Error("All Groq keys exhausted");
+
+  throw new Error("All LLM providers failed or unavailable");
 }
 
 function groqStream(res: Response): ReadableStream {
@@ -215,14 +221,45 @@ export async function generateText(
   prompt: string,
   isOwner: boolean,
 ): Promise<string> {
-  const cfg = getSmartSelectModel(isOwner);
+  const keys = getGroqKeys(isOwner);
+  const groqModel =
+    process.env.GROQ_SMART_SELECT_MODEL ?? DEFAULT_GROQ_SMART_SELECT_MODEL;
 
-  if (cfg.provider === "ollama") {
+  if (keys.length > 0) {
+    for (let i = 0; i < keys.length; i++) {
+      try {
+        const res = await fetch(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${keys[i]}`,
+            },
+            body: JSON.stringify({
+              model: groqModel,
+              stream: false,
+              messages: [{ role: "user", content: prompt }],
+            }),
+          },
+        );
+        if (res.status === 429 && i < keys.length - 1) continue;
+        if (res.ok) {
+          const data = await res.json();
+          return data?.choices?.[0]?.message?.content ?? "";
+        }
+      } catch {
+        if (i < keys.length - 1) continue;
+      }
+    }
+  }
+
+  if (hasOllama(OLLAMA_SMART_SELECT_MODEL)) {
     const res = await fetch(`${getOllamaUrl()}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: cfg.model,
+        model: OLLAMA_SMART_SELECT_MODEL,
         stream: false,
         options: { num_ctx: OLLAMA_CTX },
         prompt,
@@ -233,24 +270,5 @@ export async function generateText(
     return data.response ?? "";
   }
 
-  const keys = getGroqKeys(isOwner);
-  for (let i = 0; i < keys.length; i++) {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${keys[i]}`,
-      },
-      body: JSON.stringify({
-        model: cfg.model,
-        stream: false,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (res.status === 429 && i < keys.length - 1) continue;
-    if (!res.ok) throw new Error(`Groq error: ${res.status} ${res.statusText}`);
-    const data = await res.json();
-    return data?.choices?.[0]?.message?.content ?? "";
-  }
-  throw new Error("All Groq keys exhausted");
+  throw new Error("All LLM providers failed or unavailable");
 }

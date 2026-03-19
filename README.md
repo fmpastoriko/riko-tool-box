@@ -66,7 +66,7 @@ OLLAMA_SMART_SELECT_MODEL=qwen2.5:7b
 OLLAMA_CTX=16384
 
 # Set to true to enable local repo mode in Code Briefer
-LOCAL=true
+NEXT_PUBLIC_LOCAL=true
 ```
 
 ### 3. Google OAuth setup
@@ -111,7 +111,7 @@ Open [http://localhost:3000](http://localhost:3000).
 2. Import the repo in [Vercel](https://vercel.com).
 3. Set all environment variables from `.env.local` in Vercel project settings:
    - Change `NEXTAUTH_URL` to your Vercel URL
-   - Leave `LOCAL` unset or set to `false`
+   - Leave `NEXT_PUBLIC_LOCAL` unset or set to `false`
    - Leave `OLLAMA_URL` unset (Groq only on Vercel)
 4. Deploy.
 

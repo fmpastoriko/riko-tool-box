@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import { isRepoAllowed, resolveFilePath } from "@/lib/repos";
 
-const IS_LOCAL = process.env.LOCAL === "true";
+const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
 const MAX_FILE_SIZE = 500 * 1024;
 const BLOCKED_FILENAMES = new Set([
   ".env",

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { formatDate } from "@/lib/formatDate";
 
 interface Session {
@@ -7,8 +8,7 @@ interface Session {
   prompt_label: string;
   files_selected: string | string[];
   created_at: string;
-  prompt_body?: string | null;
-  additional_prompt?: string | null;
+  text_output?: string | null;
   is_own: boolean;
 }
 
@@ -33,16 +33,24 @@ export default function CodeBrieferHistoryPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1
-          className="text-2xl sm:text-3xl font-bold"
-          style={{ color: "var(--primary)" }}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1
+            className="text-2xl sm:text-3xl font-bold"
+            style={{ color: "var(--primary)" }}
+          >
+            Code Briefer History
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
+            All sessions are auto-saved.
+          </p>
+        </div>
+        <Link
+          href="/tools/code-briefer"
+          className="btn-ghost text-xs py-1 px-3 flex-shrink-0"
         >
-          Code Briefer History
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-          All sessions are auto-saved.
-        </p>
+          ← Code Briefer
+        </Link>
       </div>
 
       {loading && (
@@ -158,48 +166,28 @@ export default function CodeBrieferHistoryPage() {
                 )}
               </button>
               {expanded === s.id && s.is_own && (
-                <div className="mt-4 space-y-3">
-                  {s.prompt_body && (
-                    <div>
-                      <p
-                        className="text-xs font-mono mb-1"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Prompt
-                      </p>
-                      <pre
-                        className="text-xs font-mono p-2 rounded-lg"
-                        style={{
-                          background: "var(--bg)",
-                          border: "1px solid var(--border)",
-                          color: "var(--secondary)",
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {s.prompt_body}
-                      </pre>
-                    </div>
-                  )}
-                  {s.additional_prompt && (
-                    <div>
-                      <p
-                        className="text-xs font-mono mb-1"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Additional Prompt
-                      </p>
-                      <pre
-                        className="text-xs font-mono p-2 rounded-lg"
-                        style={{
-                          background: "var(--bg)",
-                          border: "1px solid var(--border)",
-                          color: "var(--secondary)",
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {s.additional_prompt}
-                      </pre>
-                    </div>
+                <div className="mt-4">
+                  {s.text_output ? (
+                    <pre
+                      className="text-xs font-mono p-3 rounded-lg overflow-auto"
+                      style={{
+                        background: "var(--bg)",
+                        border: "1px solid var(--border)",
+                        color: "var(--secondary)",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        maxHeight: 480,
+                      }}
+                    >
+                      {s.text_output}
+                    </pre>
+                  ) : (
+                    <p
+                      className="text-xs font-mono"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      No output saved for this session.
+                    </p>
                   )}
                 </div>
               )}

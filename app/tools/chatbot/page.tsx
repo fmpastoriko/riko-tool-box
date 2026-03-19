@@ -6,6 +6,8 @@ import RepoFileTree from "@/components/RepoFileTree";
 import ReactMarkdown from "react-markdown";
 import { parseSuggestion } from "@/lib/parseSuggestion";
 
+const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
+
 type ContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -256,12 +258,14 @@ function ChatbotInner() {
   }, [hasUnsavedMessages]);
 
   useEffect(() => {
-    fetch("/api/context/files")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.repos) setRepos(d.repos);
-      })
-      .catch(() => {});
+    if (isLocal) {
+      fetch("/api/context/files")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.repos) setRepos(d.repos);
+        })
+        .catch(() => {});
+    }
     fetch("/api/chat/models")
       .then((r) => r.json())
       .then((d) => {
@@ -629,7 +633,7 @@ function ChatbotInner() {
                 {activeSession.model}
               </span>
             )}
-            {repos.length > 0 && isOwner && !isFromCodeBriefer && (
+            {isLocal && repos.length > 0 && isOwner && !isFromCodeBriefer && (
               <select
                 className="input-base text-xs py-1.5"
                 style={{ width: 160 }}
@@ -656,7 +660,7 @@ function ChatbotInner() {
                   activeSession.repo_path!.split("/").pop()}
               </span>
             )}
-            {repoPath && isOwner && (
+            {isLocal && repoPath && isOwner && (
               <button
                 onClick={() => setShowFileTree(true)}
                 className="btn-ghost text-xs py-1 px-3"
@@ -891,7 +895,8 @@ function ChatbotInner() {
                         ) : (
                           text
                         )}
-                        {m.role === "assistant" &&
+                        {isLocal &&
+                          m.role === "assistant" &&
                           text &&
                           repoPath &&
                           !isContextNote && (
@@ -1049,7 +1054,7 @@ function ChatbotInner() {
         </div>
       </div>
 
-      {showFileTree && repoPath && (
+      {isLocal && showFileTree && repoPath && (
         <RepoFileTree
           repoPath={repoPath}
           onInject={handleInjectContext}

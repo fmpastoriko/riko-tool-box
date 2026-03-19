@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { formatDate } from "@/lib/formatDate";
 
 interface Comparison {
@@ -55,16 +56,24 @@ export default function TextCompareHistoryPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1
-          className="text-2xl sm:text-3xl font-bold"
-          style={{ color: "var(--primary)" }}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1
+            className="text-2xl sm:text-3xl font-bold"
+            style={{ color: "var(--primary)" }}
+          >
+            Text Compare History
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
+            All comparisons are auto-saved.
+          </p>
+        </div>
+        <Link
+          href="/tools/text-compare"
+          className="btn-ghost text-xs py-1 px-3 flex-shrink-0"
         >
-          Text Compare History
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-          All comparisons are auto-saved.
-        </p>
+          ← Text Compare
+        </Link>
       </div>
 
       {loading && (

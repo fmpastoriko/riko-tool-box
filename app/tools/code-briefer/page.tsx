@@ -10,6 +10,8 @@ import { summarizeFile } from "@/lib/summarize";
 import { parseSuggestion } from "@/lib/parseSuggestion";
 import { formatSize, estimateTokens } from "@/lib/fileUtils";
 
+const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
+
 const FOOTER_APPEND = `
 DO NOT ADD ANY COMMENTS.
 THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH. Example: app/tools/Page.tsx become "app-tools-page"
@@ -42,7 +44,9 @@ function buildOutput(
   const parts: string[] = [];
   parts.push(footer);
   parts.push("");
-  const fullPrompt = additionalPrompt.trim() ? `${prompt}\n${additionalPrompt.trim()}` : prompt;
+  const fullPrompt = additionalPrompt.trim()
+    ? `${prompt}\n${additionalPrompt.trim()}`
+    : prompt;
   parts.push("PROMPT:");
   parts.push(fullPrompt);
   parts.push("");
@@ -66,6 +70,35 @@ function buildOutput(
 }
 
 type FileEntry = { path: string; size: number };
+
+function parseGitignore(content: string): string[] {
+  return content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+}
+
+function isIgnored(filePath: string, patterns: string[]): boolean {
+  for (const pattern of patterns) {
+    const clean = pattern.replace(/\/$/, "");
+    if (
+      filePath === clean ||
+      filePath.startsWith(clean + "/") ||
+      filePath.split("/").includes(clean)
+    ) {
+      return true;
+    }
+    if (clean.startsWith("*.")) {
+      const ext = clean.slice(1);
+      if (filePath.endsWith(ext)) return true;
+    }
+    if (clean.startsWith("**/")) {
+      const suffix = clean.slice(3);
+      if (filePath.endsWith("/" + suffix) || filePath === suffix) return true;
+    }
+  }
+  return false;
+}
 
 function LocalFileTree({
   files,
@@ -254,6 +287,9 @@ export default function CodeBrieferPage() {
     path: string;
   } | null>(null);
   const [allFiles, setAllFiles] = useState<FileEntry[]>([]);
+  const [fileContents, setFileContents] = useState<Map<string, string>>(
+    new Map(),
+  );
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [smartSelected, setSmartSelected] = useState<Set<string>>(new Set());
   const [fullContextFiles, setFullContextFiles] = useState<Set<string>>(
@@ -262,6 +298,9 @@ export default function CodeBrieferPage() {
   const [joinedFiles, setJoinedFiles] = useState<
     { path: string; content: string }[]
   >([]);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [folderInputKey, setFolderInputKey] = useState(0);
+  const [folderProgress, setFolderProgress] = useState<number | null>(null);
 
   function toggleFullContext(filePath: string) {
     setFullContextFiles((prev) => {
@@ -369,36 +408,51 @@ export default function CodeBrieferPage() {
   );
 
   useEffect(() => {
-    fetch("/api/context/files")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.repos) {
-          setRepos(d.repos);
-          const draft = loadDraft();
-          if (draft) {
-            if (draft.promptBody !== undefined) setPromptBody(draft.promptBody);
-            if (draft.additionalPrompt !== undefined)
-              setAdditionalPrompt(draft.additionalPrompt);
-            if (draft.fileNamesHint !== undefined)
-              setFileNamesHint(draft.fileNamesHint);
-            if (draft.llmEnabled !== undefined) setLlmEnabled(draft.llmEnabled);
-            if (draft.fullContext !== undefined)
-              setFullContext(draft.fullContext);
-            if (draft.customExts !== undefined) setCustomExts(draft.customExts);
-            if (draft.enabledExts) setEnabledExts(new Set(draft.enabledExts));
-            if (draft.selectedTemplates)
-              setSelectedTemplates(new Set(draft.selectedTemplates));
-            if (draft.selectedRepo) {
-              const match = d.repos.find(
-                (r: { label: string; path: string }) =>
-                  r.path === draft.selectedRepo.path,
-              );
-              if (match) {
-                loadRepo(match).then(() => {
-                  if (draft.selectedFiles) {
-                    setSelectedFiles(new Set(draft.selectedFiles));
+    if (isLocal) {
+      fetch("/api/context/files")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.repos) {
+            setRepos(d.repos);
+            const draft = loadDraft();
+            if (draft) {
+              if (draft.promptBody !== undefined)
+                setPromptBody(draft.promptBody);
+              if (draft.additionalPrompt !== undefined)
+                setAdditionalPrompt(draft.additionalPrompt);
+              if (draft.fileNamesHint !== undefined)
+                setFileNamesHint(draft.fileNamesHint);
+              if (draft.llmEnabled !== undefined)
+                setLlmEnabled(draft.llmEnabled);
+              if (draft.fullContext !== undefined)
+                setFullContext(draft.fullContext);
+              if (draft.customExts !== undefined)
+                setCustomExts(draft.customExts);
+              if (draft.enabledExts) setEnabledExts(new Set(draft.enabledExts));
+              if (draft.selectedTemplates)
+                setSelectedTemplates(new Set(draft.selectedTemplates));
+              if (draft.selectedRepo) {
+                const match = d.repos.find(
+                  (r: { label: string; path: string }) =>
+                    r.path === draft.selectedRepo.path,
+                );
+                if (match) {
+                  loadRepo(match).then(() => {
+                    if (draft.selectedFiles)
+                      setSelectedFiles(new Set(draft.selectedFiles));
+                  });
+                }
+              } else {
+                try {
+                  const lastPath = localStorage.getItem(LAST_REPO_KEY);
+                  if (lastPath) {
+                    const match = d.repos.find(
+                      (r: { label: string; path: string }) =>
+                        r.path === lastPath,
+                    );
+                    if (match) loadRepo(match);
                   }
-                });
+                } catch {}
               }
             } else {
               try {
@@ -411,21 +465,13 @@ export default function CodeBrieferPage() {
                 }
               } catch {}
             }
-          } else {
-            try {
-              const lastPath = localStorage.getItem(LAST_REPO_KEY);
-              if (lastPath) {
-                const match = d.repos.find(
-                  (r: { label: string; path: string }) => r.path === lastPath,
-                );
-                if (match) loadRepo(match);
-              }
-            } catch {}
+            draftRestoredRef.current = true;
           }
-          draftRestoredRef.current = true;
-        }
-      })
-      .catch(() => {});
+        })
+        .catch(() => {});
+    } else {
+      draftRestoredRef.current = true;
+    }
     fetch("/api/context/templates")
       .then((r) => r.json())
       .then((d) => {
@@ -435,7 +481,7 @@ export default function CodeBrieferPage() {
   }, []);
 
   useEffect(() => {
-    if (!draftRestoredRef.current) return;
+    if (!draftRestoredRef.current || !isLocal) return;
     saveDraft({
       promptBody,
       additionalPrompt,
@@ -495,6 +541,74 @@ export default function CodeBrieferPage() {
     }
   }
 
+  async function handleFolderPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setLoadingFiles(true);
+    setFolderProgress(0);
+    setAllFiles([]);
+    setFileContents(new Map());
+    setSelectedFiles(new Set());
+    setSmartSelected(new Set());
+    setFullContextFiles(new Set());
+    setOutput("");
+    setLlmSuggestion("");
+    setLlmSkippedReason("");
+    setChatSessionId(null);
+    setRepoError("");
+
+    const folderName = files[0].webkitRelativePath.split("/")[0];
+    setSelectedRepo({ label: folderName, path: folderName });
+
+    const allFileList = Array.from(files);
+    const total = allFileList.length;
+
+    let gitignorePatterns: string[] = [];
+    const gitignoreFile = allFileList.find(
+      (f) => f.webkitRelativePath === `${folderName}/.gitignore`,
+    );
+    if (gitignoreFile) {
+      try {
+        const raw = await gitignoreFile.text();
+        gitignorePatterns = parseGitignore(raw);
+      } catch {}
+    }
+
+    const entries: FileEntry[] = [];
+    const contents = new Map<string, string>();
+    let processed = 0;
+
+    const BATCH = 50;
+    for (let i = 0; i < allFileList.length; i += BATCH) {
+      const batch = allFileList.slice(i, i + BATCH);
+      await Promise.all(
+        batch.map(async (file) => {
+          const relativePath = file.webkitRelativePath
+            .split("/")
+            .slice(1)
+            .join("/");
+          if (isIgnored(relativePath, gitignorePatterns)) return;
+          const ext = "." + relativePath.split(".").pop()!.toLowerCase();
+          if (!activeExts.has(ext)) return;
+          try {
+            const text = await file.text();
+            entries.push({ path: relativePath, size: file.size });
+            contents.set(relativePath, text);
+          } catch {}
+        }),
+      );
+      processed += batch.length;
+      setFolderProgress(Math.round((processed / total) * 100));
+    }
+
+    entries.sort((a, b) => a.path.localeCompare(b.path));
+    setAllFiles(entries);
+    setFileContents(contents);
+    setFolderProgress(null);
+    setLoadingFiles(false);
+  }
+
   function toggleFile(p: string) {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
@@ -502,6 +616,7 @@ export default function CodeBrieferPage() {
       return next;
     });
   }
+
   function toggleExt(ext: string) {
     setEnabledExts((prev) => {
       const next = new Set(prev);
@@ -530,9 +645,12 @@ export default function CodeBrieferPage() {
     const controller = new AbortController();
     llmAbortRef.current = controller;
     const analytical = isAnalyticalPrompt(promptBody);
+    const stripped = contextOutput
+      .replace(/^THIS IS A MUST:.*\n?/m, "")
+      .replace(/^Before doing anything.*\n?/m, "");
     const llmInput = analytical
-      ? contextOutput.slice(contextOutput.indexOf("PROMPT:"))
-      : contextOutput;
+      ? stripped.slice(stripped.indexOf("PROMPT:"))
+      : stripped;
     const systemPrompt = analytical
       ? `You are a helpful code assistant. The developer wants an explanation or review of the code provided.\n\nRespond in clear prose. Be direct and specific to the actual code shown.\nDo not invent problems that do not exist. Do not suggest changes unless there is a genuine issue.\nDo not use From/To code blocks. Do not output file change instructions.\nIf the code is well-written, say so plainly.`
       : `You are a precise code-change assistant. Output code changes in this exact format and nothing else.\n\nRULES:\n1. Read the PROMPT in the user message. That is the task.\n2. Find the exact lines in the FILE contents that need to change.\n3. Only output changes if there is a real, concrete problem to fix based on the PROMPT.\n4. Do NOT invent issues. Do NOT suggest "improvements" that were not asked for. If the code already does what the PROMPT asks, output: No changes needed\n5. Output one of:\n\nNo changes needed — if the code already satisfies the task\nToo many changes — if the diff is too large to express as small hunks\n\nOtherwise, for each changed location:\nFile: <exact relative path>\nFrom:\n\`\`\`\n<copy the EXACT lines verbatim from the file — minimum slice needed to uniquely locate the change>\n\`\`\`\nTo:\n\`\`\`\n<replacement lines>\n\`\`\`\n\nIf multiple locations need changes, output multiple File/From/To blocks in sequence.\nThe From block must be the shortest slice that is unique in the file — not the whole function.\nNo explanation. No prose. No questions. Just the blocks.`;
@@ -615,21 +733,31 @@ export default function CodeBrieferPage() {
     setLoadingSmartSelect(true);
     setSmartSelected(new Set());
     try {
-      const contentsRes = await fetch("/api/context/read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          repoPath: selectedRepo.path,
-          filePaths: filteredFiles.map((f) => f.path),
-        }),
-      });
-      const contentsData = await contentsRes.json();
-      const files = (contentsData.files ?? [])
-        .filter((f: { skipped?: boolean }) => !f.skipped)
-        .map((f: { path: string; content: string }) => ({
-          path: f.path,
-          content: summarizeFile(f.path, f.content),
-        }));
+      let files: { path: string; content: string }[];
+      if (isLocal) {
+        const contentsRes = await fetch("/api/context/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repoPath: selectedRepo.path,
+            filePaths: filteredFiles.map((f) => f.path),
+          }),
+        });
+        const contentsData = await contentsRes.json();
+        files = (contentsData.files ?? [])
+          .filter((f: { skipped?: boolean }) => !f.skipped)
+          .map((f: { path: string; content: string }) => ({
+            path: f.path,
+            content: summarizeFile(f.path, f.content),
+          }));
+      } else {
+        files = filteredFiles
+          .map((f) => ({
+            path: f.path,
+            content: summarizeFile(f.path, fileContents.get(f.path) ?? ""),
+          }))
+          .filter((f) => f.content);
+      }
       const smartRes = await fetch("/api/context/smart-select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -661,15 +789,25 @@ export default function CodeBrieferPage() {
     setJoinedFiles([]);
     try {
       const paths = Array.from(selectedFiles);
-      const res = await fetch("/api/context/read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoPath: selectedRepo.path, filePaths: paths }),
-      });
-      const data = await res.json();
-      const files: { path: string; content: string }[] = (
-        data.files ?? []
-      ).filter((f: { skipped?: boolean }) => !f.skipped);
+      let files: { path: string; content: string }[];
+      if (isLocal) {
+        const res = await fetch("/api/context/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repoPath: selectedRepo.path,
+            filePaths: paths,
+          }),
+        });
+        const data = await res.json();
+        files = (data.files ?? []).filter(
+          (f: { skipped?: boolean }) => !f.skipped,
+        );
+      } else {
+        files = paths
+          .map((p) => ({ path: p, content: fileContents.get(p) ?? "" }))
+          .filter((f) => f.content);
+      }
       setJoinedFiles(files);
       const fcSet = fullContext
         ? new Set(files.map((f) => f.path))
@@ -683,6 +821,14 @@ export default function CodeBrieferPage() {
         fcSet,
       );
       setOutput(built);
+      if (!isLocal) {
+        setFolderInputKey((k) => k + 1);
+        setAllFiles([]);
+        setFileContents(new Map());
+        setSelectedFiles(new Set());
+        setSmartSelected(new Set());
+        setSelectedRepo(null);
+      }
       clearDraft();
       const label =
         templates
@@ -798,38 +944,86 @@ export default function CodeBrieferPage() {
         <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
           <div className="card space-y-2 flex-shrink-0">
             <p className="section-label mb-0">Repository</p>
-            {repos.length === 0 ? (
-              <p
-                className="text-xs font-mono"
-                style={{ color: "var(--muted)" }}
-              >
-                No repos found.
-              </p>
+            {isLocal ? (
+              repos.length === 0 ? (
+                <p
+                  className="text-xs font-mono"
+                  style={{ color: "var(--muted)" }}
+                >
+                  No repos found.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {repos.map((r) => (
+                    <button
+                      key={r.path}
+                      onClick={() => loadRepo(r)}
+                      className="text-xs font-mono px-2.5 py-1 rounded-lg border transition-all"
+                      style={{
+                        borderColor:
+                          selectedRepo?.path === r.path
+                            ? "var(--accent)"
+                            : "var(--border)",
+                        background:
+                          selectedRepo?.path === r.path
+                            ? "var(--accent-dim)"
+                            : "transparent",
+                        color:
+                          selectedRepo?.path === r.path
+                            ? "var(--accent)"
+                            : "var(--secondary)",
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              )
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {repos.map((r) => (
-                  <button
-                    key={r.path}
-                    onClick={() => loadRepo(r)}
-                    className="text-xs font-mono px-2.5 py-1 rounded-lg border transition-all"
-                    style={{
-                      borderColor:
-                        selectedRepo?.path === r.path
-                          ? "var(--accent)"
-                          : "var(--border)",
-                      background:
-                        selectedRepo?.path === r.path
-                          ? "var(--accent-dim)"
-                          : "transparent",
-                      color:
-                        selectedRepo?.path === r.path
-                          ? "var(--accent)"
-                          : "var(--secondary)",
-                    }}
-                  >
-                    {r.label}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <input
+                  key={folderInputKey}
+                  ref={folderInputRef}
+                  type="file"
+                  className="hidden"
+                  {...({
+                    webkitdirectory: "",
+                  } as React.InputHTMLAttributes<HTMLInputElement>)}
+                  onChange={handleFolderPick}
+                />
+                <button
+                  onClick={() => folderInputRef.current?.click()}
+                  className="btn-ghost text-xs py-1.5 px-3"
+                  disabled={loadingFiles}
+                >
+                  {loadingFiles
+                    ? "Reading…"
+                    : selectedRepo
+                      ? `📁 ${selectedRepo.label}`
+                      : "Pick Folder"}
+                </button>
+                {folderProgress !== null && (
+                  <div className="space-y-1">
+                    <div
+                      className="w-full rounded-full overflow-hidden"
+                      style={{ height: 4, background: "var(--border)" }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-150"
+                        style={{
+                          width: `${folderProgress}%`,
+                          background: "var(--accent)",
+                        }}
+                      />
+                    </div>
+                    <p
+                      className="text-xs font-mono"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      {folderProgress}%
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {repoError && (
@@ -837,7 +1031,7 @@ export default function CodeBrieferPage() {
                 {repoError}
               </p>
             )}
-            {loadingFiles && (
+            {isLocal && loadingFiles && (
               <p
                 className="text-xs font-mono"
                 style={{ color: "var(--muted)" }}
@@ -1037,6 +1231,8 @@ export default function CodeBrieferPage() {
                 <button
                   onClick={() => {
                     setPromptBody(DEFAULT_PROMPT);
+                    setAdditionalPrompt("");
+                    setFileNamesHint("");
                     setSelectedTemplates(new Set());
                   }}
                   className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
@@ -1053,6 +1249,8 @@ export default function CodeBrieferPage() {
                 <button
                   onClick={() => {
                     setPromptBody(DEFAULT_PROMPT_2);
+                    setAdditionalPrompt("");
+                    setFileNamesHint("");
                     setSelectedTemplates(new Set());
                   }}
                   className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
@@ -1147,7 +1345,8 @@ export default function CodeBrieferPage() {
                           Chat ↗
                         </button>
                       )}
-                      {selectedRepo &&
+                      {isLocal &&
+                        selectedRepo &&
                         parseSuggestion(llmSuggestion).length > 0 && (
                           <button
                             onClick={handleApplyChanges}

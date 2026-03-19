@@ -289,9 +289,9 @@ function TextCompareInner() {
           </div>
           <Link
             href="/tools/text-compare/history"
-            className="btn-ghost text-sm"
+            className="btn-ghost text-xs py-1 px-3"
           >
-            History
+            History ↗
           </Link>
         </div>
       </div>

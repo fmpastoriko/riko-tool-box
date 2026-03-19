@@ -30,7 +30,7 @@ const tools = [
 
 export default function ToolsPage() {
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+    <div className="px-4 sm:px-6 py-12 sm:py-16">
       <div className="mb-8">
         <p className="section-label">Toolbox</p>
         <h1
@@ -47,7 +47,7 @@ export default function ToolsPage() {
           behind each one.
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {tools.map((tool) => (
           <ToolCard key={tool.href} {...tool} />
         ))}

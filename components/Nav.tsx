@@ -20,12 +20,6 @@ const externalLinks = [
     label: "LinkedIn ↗",
   },
   {
-    href: "https://docs.google.com/document/d/18JjuVlVi75p8zrqZLmBKGH7UNUk9riT_/edit?usp=sharing&ouid=102797638099932464376&rtpof=true&sd=true",
-    label: "TRD ↗",
-    variant: "ghost" as const,
-    mobileHidden: true,
-  },
-  {
     href: "https://docs.google.com/document/d/1zUFSrcWuf5AFhZUU335PIU4--8l8qvP_pDg7YT0GzeU/edit?tab=t.0",
     label: "CV ↗",
     variant: "primary" as const,
@@ -75,12 +69,7 @@ export default function Nav() {
             const color =
               l.variant === "primary"
                 ? { background: "var(--accent)", color: "#fff" }
-                : l.variant === "ghost"
-                  ? {
-                      border: "1px solid var(--border)",
-                      color: "var(--secondary)",
-                    }
-                  : { color: "var(--secondary)" };
+                : { color: "var(--secondary)" };
             return (
               <a
                 key={l.href}
