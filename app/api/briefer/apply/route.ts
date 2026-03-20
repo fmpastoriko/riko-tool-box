@@ -18,7 +18,7 @@ function normalizeIndent(text: string): string {
   return lines.map((l) => l.slice(minIndent)).join("\n");
 }
 
-function findAndReplace(
+function findAndReplaceAll(
   original: string,
   from: string,
   to: string,
@@ -30,6 +30,8 @@ function findAndReplace(
   const lines = original.split("\n");
   const fromLines = fromNorm.split("\n");
   const fromLen = fromLines.length;
+  let result = original;
+  let found = false;
   for (let i = 0; i <= lines.length - fromLen; i++) {
     const slice = lines.slice(i, i + fromLen);
     const sliceNorm = normalizeIndent(slice.join("\n"));
@@ -40,14 +42,11 @@ function findAndReplace(
         .split("\n")
         .map((l, idx) => (idx === 0 ? l : baseIndent + l))
         .join("\n");
-      return (
-        original.slice(0, original.indexOf(originalBlock)) +
-        toIndented +
-        original.slice(original.indexOf(originalBlock) + originalBlock.length)
-      );
+      result = result.split(originalBlock).join(toIndented);
+      found = true;
     }
   }
-  return null;
+  return found ? result : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -98,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     const original = fs.readFileSync(abs, "utf-8");
-    const updated = findAndReplace(original, from, to);
+    const updated = findAndReplaceAll(original, from, to);
 
     if (updated === null) {
       return NextResponse.json(

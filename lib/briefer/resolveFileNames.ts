@@ -1,11 +1,9 @@
 export function resolveFileNames(raw: string, allPaths: string[]): string[] {
   const candidates = raw.match(/[\w.\-/]+/g) ?? [];
   const result: string[] = [];
-
   for (const rawToken of candidates) {
-    const token = rawToken.replace(/-/g, "/");
+    const token = rawToken;
     const lower = token.toLowerCase();
-
     const exact = allPaths.find(
       (p) => p === token || p.toLowerCase() === lower,
     );
@@ -13,7 +11,6 @@ export function resolveFileNames(raw: string, allPaths: string[]): string[] {
       result.push(exact);
       continue;
     }
-
     const bySuffix = allPaths.filter((p) => {
       const pLower = p.toLowerCase();
       return (
@@ -27,7 +24,16 @@ export function resolveFileNames(raw: string, allPaths: string[]): string[] {
       result.push(...bySuffix);
       continue;
     }
-
+    const isPathLike = lower.includes("/") || lower.includes(".");
+    if (isPathLike && lower.length >= 5) {
+      const bySubstring = allPaths.filter((p) =>
+        p.toLowerCase().includes(lower),
+      );
+      if (bySubstring.length >= 1) {
+        result.push(...bySubstring);
+        continue;
+      }
+    }
     const byFilename = allPaths.filter(
       (p) => p.split("/").pop()?.toLowerCase() === lower,
     );
@@ -39,7 +45,6 @@ export function resolveFileNames(raw: string, allPaths: string[]): string[] {
       result.push(...byFilename);
       continue;
     }
-
     const byPrefix = allPaths.filter((p) => {
       const noExt = p.toLowerCase().replace(/\.[^/.]+$/, "");
       return noExt === lower;
@@ -47,6 +52,5 @@ export function resolveFileNames(raw: string, allPaths: string[]): string[] {
     if (byPrefix.length === 1) result.push(byPrefix[0]);
     else if (byPrefix.length > 1) result.push(...byPrefix);
   }
-
   return [...new Set(result)].map((p) => p.replace(/\s/g, ""));
 }

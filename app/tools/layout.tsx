@@ -107,7 +107,7 @@ export default function ToolsLayout({
       </div>
 
       <div
-        className="sm:hidden flex flex-col"
+        className="sm:hidden flex flex-col px-4 pt-4"
         style={{ height: "calc(100vh - 3.5rem)" }}
       >
         {children}

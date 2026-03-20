@@ -21,47 +21,54 @@ export async function GET(req: NextRequest) {
     const role = await getServerRole();
     const owner = isOwnerRole(role);
     const hashedIp = sha256(getIp(req));
+    const ownerUserId = process.env.OWNER_EMAIL ?? null;
     const rows = await neonDb`
       SELECT s.id, s.prompt_label, s.prompt_body, s.additional_prompt, s.files_selected,
-             s.created_at, s.hashed_ip, o.text_output
+             s.created_at, s.hashed_ip, s.user_id, o.text_output
       FROM context_sessions s
       LEFT JOIN context_outputs o ON o.session_id = s.id
       ORDER BY s.created_at DESC
       LIMIT 100
     `;
-    const sessions = rows.map((row) => {
-      const isOwn = owner || row.hashed_ip === hashedIp;
-      if (isOwn) {
+    const sessions = rows
+      .filter((row) => {
+        if (owner) return true;
+        if (ownerUserId && row.user_id === ownerUserId) return false;
+        return true;
+      })
+      .map((row) => {
+        const isOwn = owner || row.hashed_ip === hashedIp;
+        if (isOwn) {
+          return {
+            id: row.id,
+            prompt_label: row.prompt_label,
+            prompt_body: owner
+              ? safeDecrypt(row.prompt_body as string)
+              : (row.prompt_body as string),
+            additional_prompt: row.additional_prompt
+              ? owner
+                ? safeDecrypt(row.additional_prompt as string)
+                : (row.additional_prompt as string)
+              : null,
+            text_output: owner
+              ? safeDecrypt(row.text_output as string)
+              : (row.text_output as string | null),
+            files_selected: row.files_selected,
+            created_at: row.created_at,
+            is_own: true,
+          };
+        }
         return {
           id: row.id,
-          prompt_label: row.prompt_label,
-          prompt_body: owner
-            ? safeDecrypt(row.prompt_body as string)
-            : (row.prompt_body as string),
-          additional_prompt: row.additional_prompt
-            ? owner
-              ? safeDecrypt(row.additional_prompt as string)
-              : (row.additional_prompt as string)
-            : null,
-          text_output: owner
-            ? safeDecrypt(row.text_output as string)
-            : (row.text_output as string | null),
-          files_selected: row.files_selected,
+          prompt_label: "···",
+          prompt_body: null,
+          additional_prompt: null,
+          text_output: null,
+          files_selected: [],
           created_at: row.created_at,
-          is_own: true,
+          is_own: false,
         };
-      }
-      return {
-        id: row.id,
-        prompt_label: "···",
-        prompt_body: null,
-        additional_prompt: null,
-        text_output: null,
-        files_selected: [],
-        created_at: row.created_at,
-        is_own: false,
-      };
-    });
+      });
     return NextResponse.json({ authenticated: owner, sessions });
   } catch (e) {
     console.error("GET /api/briefer/sessions error:", e);

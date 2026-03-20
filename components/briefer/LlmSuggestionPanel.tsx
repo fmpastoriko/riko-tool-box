@@ -48,13 +48,14 @@ export default function LlmSuggestionPanel({
   onApply,
   onChange,
 }: LlmSuggestionPanelProps) {
-  const [markdownView, setMarkdownView] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
 
   const showContent = !llmSkippedReason || llmSuggestion;
+
+  const thinkingModel = modelUsed || selectedModel || "LLM";
 
   return (
     <div className="flex-1 flex flex-col min-h-0 card gap-2">
@@ -122,37 +123,16 @@ export default function LlmSuggestionPanel({
           {llmSuggestion && !llmStreaming && (
             <>
               <button
-                onClick={() => {
-                  setMarkdownView((v) => {
-                    if (!v) setIsEditing(false);
-                    return !v;
-                  });
-                }}
+                onClick={() => setIsEditing((v) => !v)}
                 className="btn-ghost text-xs py-0.5 px-1.5"
                 style={
-                  markdownView
+                  isEditing
                     ? { color: "var(--accent)", borderColor: "var(--accent)" }
                     : {}
                 }
               >
-                MD
+                Edit
               </button>
-              {!markdownView && (
-                <button
-                  onClick={() => setIsEditing((v) => !v)}
-                  className="btn-ghost text-xs py-0.5 px-1.5"
-                  style={
-                    isEditing
-                      ? {
-                          color: "var(--accent)",
-                          borderColor: "var(--accent)",
-                        }
-                      : {}
-                  }
-                >
-                  {isEditing ? "Lock" : "Edit"}
-                </button>
-              )}
               <button
                 onClick={onRetry}
                 className="btn-ghost text-xs py-0.5 px-1.5"
@@ -205,7 +185,7 @@ export default function LlmSuggestionPanel({
         <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
           {llmSkippedReason}
         </p>
-      ) : markdownView && llmSuggestion ? (
+      ) : !isEditing && llmSuggestion ? (
         <div
           className="flex-1 overflow-y-auto text-sm leading-relaxed markdown-body"
           style={{ color: "var(--secondary)" }}
@@ -282,8 +262,12 @@ export default function LlmSuggestionPanel({
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
           }}
-          readOnly={llmStreaming || !isEditing}
-          placeholder="LLM suggestion will appear here after Join…"
+          readOnly={llmStreaming}
+          placeholder={
+            llmStreaming
+              ? `${thinkingModel} is thinking...`
+              : "LLM suggestion will appear here after Join…"
+          }
         />
       )}
 

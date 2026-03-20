@@ -116,7 +116,7 @@ export default function Nav() {
 
       {showBanner && (
         <div
-          className="sm:hidden flex items-center px-4 py-2 border-b"
+          className="sm:hidden sticky top-14 z-40 flex items-center px-4 py-2 border-b"
           style={{
             background: "rgba(239,68,68,0.06)",
             borderColor: "rgba(239,68,68,0.25)",

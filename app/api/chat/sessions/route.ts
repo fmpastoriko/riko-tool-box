@@ -14,8 +14,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ sessions: rows });
     }
     const hashedIp = sha256(getIp(req));
-    const rows =
-      await neonDb`SELECT id, title, repo_path, model, created_at FROM chat_sessions WHERE user_id = ${hashedIp} ORDER BY created_at DESC LIMIT 10`;
+    const ownerUserId = process.env.OWNER_EMAIL ?? null;
+    const rows = await neonDb`
+      SELECT id, title, repo_path, model, created_at FROM chat_sessions
+      WHERE user_id = ${hashedIp}
+      AND (${ownerUserId}::text IS NULL OR user_id != ${ownerUserId})
+      ORDER BY created_at DESC LIMIT 10
+    `;
     return NextResponse.json({ sessions: rows });
   } catch {
     return NextResponse.json(

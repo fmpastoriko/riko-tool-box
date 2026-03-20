@@ -1084,67 +1084,104 @@ export default function CodeBrieferPage() {
                   {t.label}
                 </button>
               ))}
-              <div className="ml-auto flex gap-1">
-                <button
-                  onClick={() => {
-                    setPromptBody(DEFAULT_PROMPT);
-                    setAdditionalPrompt("");
-                    setFileNamesHint("");
-                    setSelectedTemplates(new Set());
-                  }}
-                  className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
-                  style={{
-                    borderColor: isDefault1 ? "var(--accent)" : "var(--border)",
-                    color: isDefault1 ? "var(--accent)" : "var(--muted)",
-                    background: isDefault1
-                      ? "var(--accent-dim)"
-                      : "transparent",
-                  }}
-                >
-                  Default
-                </button>
-                <button
-                  onClick={() => {
-                    setPromptBody(DEFAULT_PROMPT_2);
-                    setAdditionalPrompt("");
-                    setFileNamesHint("");
-                    setSelectedTemplates(new Set());
-                  }}
-                  className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
-                  style={{
-                    borderColor: isDefault2 ? "var(--accent)" : "var(--border)",
-                    color: isDefault2 ? "var(--accent)" : "var(--muted)",
-                    background: isDefault2
-                      ? "var(--accent-dim)"
-                      : "transparent",
-                  }}
-                >
-                  Default-2
-                </button>
-              </div>
             </div>
             <div className="flex gap-2">
-              <textarea
-                className="input-base flex-1 h-28 resize-none"
-                value={promptBody}
-                onChange={(e) => {
-                  setPromptBody(e.target.value);
-                  setSelectedTemplates(new Set());
-                }}
-                placeholder="Prompt…"
-              />
-              <textarea
-                className="input-base flex-1 h-28 resize-none"
-                value={additionalPrompt}
-                onChange={(e) => setAdditionalPrompt(e.target.value)}
-                placeholder="Additional prompt…"
-              />
-              <textarea
-                className="input-base flex-1 h-28 resize-none"
-                value={fileNamesHint}
-                onChange={(e) => setFileNamesHint(e.target.value)}
-                placeholder="File names (Smart Select bypass)…"
-              />
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex justify-end gap-1">
+                  <button
+                    onClick={() => {
+                      setPromptBody(DEFAULT_PROMPT);
+                      setAdditionalPrompt("");
+                      setFileNamesHint("");
+                      setSelectedTemplates(new Set());
+                    }}
+                    className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
+                    style={{
+                      borderColor: isDefault1
+                        ? "var(--accent)"
+                        : "var(--border)",
+                      color: isDefault1 ? "var(--accent)" : "var(--muted)",
+                      background: isDefault1
+                        ? "var(--accent-dim)"
+                        : "transparent",
+                    }}
+                  >
+                    Default
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPromptBody(DEFAULT_PROMPT_2);
+                      setAdditionalPrompt("");
+                      setFileNamesHint("");
+                      setSelectedTemplates(new Set());
+                    }}
+                    className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
+                    style={{
+                      borderColor: isDefault2
+                        ? "var(--accent)"
+                        : "var(--border)",
+                      color: isDefault2 ? "var(--accent)" : "var(--muted)",
+                      background: isDefault2
+                        ? "var(--accent-dim)"
+                        : "transparent",
+                    }}
+                  >
+                    Default 1
+                  </button>
+                </div>
+                <textarea
+                  className="input-base flex-1 resize-none"
+                  style={{ minHeight: 96 }}
+                  value={promptBody}
+                  onChange={(e) => {
+                    setPromptBody(e.target.value);
+                    setSelectedTemplates(new Set());
+                  }}
+                  placeholder="Prompt…"
+                />
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setAdditionalPrompt("")}
+                    className="text-xs font-mono px-1.5 py-0.5 rounded border"
+                    style={{
+                      borderColor: "var(--border)",
+                      color: "var(--muted)",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <textarea
+                  className="input-base flex-1 resize-none"
+                  style={{ minHeight: 0 }}
+                  value={additionalPrompt}
+                  onChange={(e) => setAdditionalPrompt(e.target.value)}
+                  placeholder="Additional prompt…"
+                />
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setFileNamesHint("")}
+                    className="text-xs font-mono px-1.5 py-0.5 rounded border"
+                    style={{
+                      borderColor: "var(--border)",
+                      color: "var(--muted)",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <textarea
+                  className="input-base flex-1 resize-none"
+                  style={{ minHeight: 0 }}
+                  value={fileNamesHint}
+                  onChange={(e) => setFileNamesHint(e.target.value)}
+                  placeholder="File names (Smart Select bypass)…"
+                />
+              </div>
             </div>
           </div>
 

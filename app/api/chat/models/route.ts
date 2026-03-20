@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerRole, isOwnerRole } from "@/lib/session";
 import { PROVIDER_CHAIN, getKeysForModel } from "@/lib/llmProviders";
 import { getAllExhaustedModels } from "@/lib/llmExhaustion";
-import { useOllama, getOllamaUrl } from "@/lib/llm";
 import { PUBLIC_GROQ_MODEL } from "@/config/llm";
 
 const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
@@ -18,22 +17,9 @@ export async function GET() {
   const owner = isOwnerRole(role);
 
   if (!owner) {
-    if (useOllama()) {
-      const ollamaUrl = getOllamaUrl();
-      try {
-        const res = await fetch(`${ollamaUrl}/api/tags`);
-        const data = await res.json();
-        const models = (data.models ?? []).map((m: { name: string }) => ({
-          name: m.name,
-          provider: "ollama",
-          exhausted: false,
-        }));
-        return NextResponse.json({ models });
-      } catch {
-        return NextResponse.json({ models: [] });
-      }
-    }
-    return NextResponse.json({ models: [] });
+    return NextResponse.json({
+      models: [{ name: PUBLIC_GROQ_MODEL, provider: "groq", exhausted: false }],
+    });
   }
 
   const exhaustedMap = await getAllExhaustedModels();

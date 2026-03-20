@@ -9,28 +9,7 @@ import {
 import { getExhaustedKeys, markKeyExhausted } from "@/lib/llmExhaustion";
 import { PUBLIC_GROQ_MODEL } from "@/config/llm";
 
-const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
-const OLLAMA_CTX = Number(process.env.OLLAMA_CTX ?? 8192);
-const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL ?? "llama3.2";
-const OLLAMA_SMART_SELECT_MODEL =
-  process.env.OLLAMA_SMART_SELECT_MODEL ?? "llama3.2";
 const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
-
-export function useOllama(): boolean {
-  return process.env.USE_OLLAMA === "true";
-}
-
-export function getOllamaUrl(): string {
-  return OLLAMA_URL;
-}
-
-export function getChatModel(): string {
-  return OLLAMA_CHAT_MODEL;
-}
-
-export function getSmartSelectModel(): string {
-  return OLLAMA_SMART_SELECT_MODEL;
-}
 
 type ContentPart =
   | { type: "text"; text: string }
@@ -59,17 +38,6 @@ function getChainForTokens(tokenCount: number): ModelConfig[] {
   return tokenCount < CHAIN_THRESHOLD_TOKENS
     ? CHAIN_UNDER_THRESHOLD
     : CHAIN_OVER_THRESHOLD;
-}
-
-async function hasOllama(): Promise<boolean> {
-  try {
-    const res = await fetch(`${OLLAMA_URL}/api/tags`, {
-      signal: AbortSignal.timeout(1000),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
 }
 
 async function geminiStreamRequest(
@@ -242,46 +210,6 @@ async function groqGenerateText(
   return data?.choices?.[0]?.message?.content ?? "";
 }
 
-function ollamaStream(
-  model: string,
-  messages: ChatMessage[],
-): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages,
-          stream: true,
-          options: { num_ctx: OLLAMA_CTX },
-        }),
-      });
-      if (!res.ok || !res.body) {
-        controller.close();
-        return;
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const text = decoder.decode(value, { stream: true });
-        for (const line of text.split("\n")) {
-          try {
-            const json = JSON.parse(line);
-            const token = json?.message?.content ?? "";
-            if (token) controller.enqueue(encoder.encode(token));
-          } catch {}
-        }
-      }
-      controller.close();
-    },
-  });
-}
-
 async function tryChain(
   chain: ModelConfig[],
   fn: (
@@ -316,8 +244,9 @@ export async function streamChat(
   isOwner: boolean,
   preferredModel?: string,
 ): Promise<{ stream: ReadableStream<Uint8Array>; modelUsed: string }> {
-  if (!IS_LOCAL) {
-    const publicKey = process.env.GROQ_API_KEY_PUBLIC;
+  const publicKey = process.env.GROQ_API_KEY_PUBLIC;
+
+  if (!IS_LOCAL || !isOwner) {
     if (!publicKey) throw new Error("No models available");
     const stream = await groqStreamRequest(
       PUBLIC_GROQ_MODEL,
@@ -326,16 +255,6 @@ export async function streamChat(
     );
     if (!stream) throw new Error("No models available");
     return { stream, modelUsed: PUBLIC_GROQ_MODEL };
-  }
-
-  if (!isOwner) {
-    if (await hasOllama()) {
-      return {
-        stream: ollamaStream(OLLAMA_CHAT_MODEL, messages),
-        modelUsed: OLLAMA_CHAT_MODEL,
-      };
-    }
-    throw new Error("No models available");
   }
 
   let chain: ModelConfig[];
@@ -366,32 +285,13 @@ export async function generateText(
   isOwner: boolean,
   preferredModel?: string,
 ): Promise<{ text: string; modelUsed: string }> {
-  if (!IS_LOCAL) {
-    const publicKey = process.env.GROQ_API_KEY_PUBLIC;
+  const publicKey = process.env.GROQ_API_KEY_PUBLIC;
+
+  if (!IS_LOCAL || !isOwner) {
     if (!publicKey) throw new Error("No models available");
     const text = await groqGenerateText(PUBLIC_GROQ_MODEL, publicKey, prompt);
     if (text === null) throw new Error("No models available");
     return { text, modelUsed: PUBLIC_GROQ_MODEL };
-  }
-
-  if (!isOwner) {
-    if (await hasOllama()) {
-      const res = await fetch(`${OLLAMA_URL}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: OLLAMA_SMART_SELECT_MODEL,
-          prompt,
-          stream: false,
-        }),
-      });
-      const data = await res.json();
-      return {
-        text: data?.response ?? "",
-        modelUsed: OLLAMA_SMART_SELECT_MODEL,
-      };
-    }
-    throw new Error("No models available");
   }
 
   let chain: ModelConfig[];
