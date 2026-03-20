@@ -3,13 +3,11 @@ import { NextRequest } from "next/server";
 export function getIp(req: NextRequest): string {
   const realIp = req.headers.get("x-real-ip");
   if (realIp) return sanitizeIp(realIp);
-
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     const last = forwarded.split(",").at(-1)?.trim();
     if (last) return sanitizeIp(last);
   }
-
   return "unknown";
 }
 

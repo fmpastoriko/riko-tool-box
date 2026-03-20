@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -33,8 +34,7 @@ const shared =
 const DEMO_MSG =
   "Demo mode: Do not enter sensitive information. Sessions are stored by IP and visible to anyone with the session ID.";
 
-const DEMO_MSG_PHONE =
-  "Demo mode: Don't enter sensitive info.";
+const DEMO_MSG_PHONE = "Demo mode: Don't enter sensitive info.";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -106,12 +106,14 @@ export default function Nav() {
               );
             })}
           </div>
+
           <div className="hidden sm:flex">
             <AuthButton />
           </div>
           <ThemeToggle />
         </div>
       </nav>
+
       {showBanner && (
         <div
           className="sm:hidden flex items-center px-4 py-2 border-b"

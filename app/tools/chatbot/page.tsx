@@ -1,196 +1,24 @@
 "use client";
+
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import RepoFileTree from "@/components/RepoFileTree";
-import ReactMarkdown from "react-markdown";
-import { parseSuggestion } from "@/lib/parseSuggestion";
+import MessageBubble, {
+  markdownStyles,
+} from "@/components/chatbot/MessageBubble";
+import SessionList from "@/components/chatbot/SessionList";
+import UnauthenticatedBanner from "@/components/chatbot/UnauthenticatedBanner";
+import type {
+  Message,
+  ChatSession,
+  ModelInfo,
+  ContentPart,
+} from "@/components/chatbot/types";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
-type ContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
-
-type Message = {
-  id?: string;
-  role: "user" | "assistant" | "system";
-  content: string | ContentPart[];
-};
-type Session = {
-  id: string;
-  title: string;
-  repo_path: string | null;
-  model: string | null;
-  created_at: string;
-};
 type Repo = { label: string; path: string };
-
-const markdownStyles = `
-  .markdown-body ul { list-style-type: disc; padding-left: 20px; margin: 4px 0; }
-  .markdown-body ol { list-style-type: decimal; padding-left: 20px; margin: 4px 0; }
-  .markdown-body li { margin: 2px 0; }
-  .markdown-body p { margin: 0 0 4px 0; }
-  .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: 600; margin: 6px 0 2px 0; }
-`;
-
-function messageText(content: string | ContentPart[]): string {
-  if (typeof content === "string") return content;
-  return content
-    .filter((p) => p.type === "text")
-    .map((p) => (p as { type: "text"; text: string }).text)
-    .join("");
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        } catch {}
-      }}
-      className="text-xs px-1.5 py-0.5 rounded flex-shrink-0"
-      style={{ background: "rgba(0,0,0,0.1)", color: "inherit", opacity: 0.6 }}
-    >
-      {copied ? "✓ copied" : "⎘ copy"}
-    </button>
-  );
-}
-
-function ApplyButton({
-  content,
-  repoPath,
-}: {
-  content: string;
-  repoPath: string;
-}) {
-  const blocks = parseSuggestion(content);
-  const [results, setResults] = useState<
-    { file: string; ok: boolean; error?: string }[]
-  >([]);
-  const [applying, setApplying] = useState(false);
-  if (blocks.length === 0) return null;
-  return (
-    <div className="mt-2 space-y-1">
-      <button
-        onClick={async () => {
-          setApplying(true);
-          setResults([]);
-          const res: { file: string; ok: boolean; error?: string }[] = [];
-          for (const block of blocks) {
-            try {
-              const r = await fetch("/api/context/apply", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  repoPath,
-                  filePath: block.filePath,
-                  from: block.from,
-                  to: block.to,
-                }),
-              });
-              const d = await r.json();
-              res.push({ file: block.filePath, ok: !!d.ok, error: d.error });
-            } catch (e) {
-              res.push({ file: block.filePath, ok: false, error: String(e) });
-            }
-          }
-          setResults(res);
-          setApplying(false);
-        }}
-        disabled={applying}
-        className="btn-primary text-xs py-1 px-3"
-        style={{ opacity: applying ? 0.6 : 1 }}
-      >
-        {applying ? "Applying…" : "⚡ Apply Changes"}
-      </button>
-      {results.map((r, i) => (
-        <div key={i} className="flex items-center gap-2 text-xs font-mono">
-          <span style={{ color: r.ok ? "rgb(34,197,94)" : "rgb(239,68,68)" }}>
-            {r.ok ? "✓" : "✕"}
-          </span>
-          <span style={{ color: "var(--secondary)" }}>{r.file}</span>
-          {r.error && (
-            <span style={{ color: "rgb(239,68,68)" }}>{r.error}</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function UnauthenticatedBanner({ hasMessages }: { hasMessages: boolean }) {
-  return (
-    <div
-      className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap flex-shrink-0"
-      style={{
-        background: "var(--accent-dim)",
-        border: "1px solid var(--accent)",
-      }}
-    >
-      <p className="text-xs font-mono" style={{ color: "var(--accent)" }}>
-        {hasMessages
-          ? "You're not signed in — your chat is tied to your IP."
-          : "Sign in to keep your chat history privately."}
-      </p>
-      <button
-        onClick={() => signIn("google")}
-        className="btn-primary text-xs py-1 px-3 flex-shrink-0"
-      >
-        Sign in with Google
-      </button>
-    </div>
-  );
-}
-
-function SessionList({
-  sessions,
-  activeSession,
-  onSelect,
-  onDelete,
-}: {
-  sessions: Session[];
-  activeSession: Session | null;
-  onSelect: (s: Session) => void;
-  onDelete: (e: React.MouseEvent, id: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
-      {sessions.length === 0 && (
-        <p className="text-xs font-mono px-2" style={{ color: "var(--muted)" }}>
-          No sessions yet
-        </p>
-      )}
-      {sessions.map((s) => (
-        <button
-          key={s.id}
-          onClick={() => onSelect(s)}
-          className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all group flex items-start justify-between gap-1 flex-shrink-0"
-          style={{
-            background:
-              activeSession?.id === s.id ? "var(--accent-dim)" : "transparent",
-            border: `1px solid ${activeSession?.id === s.id ? "var(--accent)" : "var(--border)"}`,
-            color:
-              activeSession?.id === s.id ? "var(--accent)" : "var(--secondary)",
-          }}
-        >
-          <span className="flex-1 truncate font-mono">{s.title}</span>
-          <span
-            onClick={(e) => onDelete(e, s.id)}
-            className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity"
-            style={{ color: "var(--muted)" }}
-          >
-            ✕
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function ChatbotInner() {
   const searchParams = useSearchParams();
@@ -201,11 +29,9 @@ function ChatbotInner() {
   const isAuthenticated = !!authSession;
 
   const [repos, setRepos] = useState<Repo[]>([]);
-  const [models, setModels] = useState<{ name: string; provider: string }[]>(
-    [],
-  );
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -221,13 +47,18 @@ function ChatbotInner() {
   } | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [noModelsAvailable, setNoModelsAvailable] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const initDoneRef = useRef(false);
+
   const hasUnsavedMessages = !isAuthenticated && messages.length > 0;
+  const sessionStarted = !!activeSession;
+  const allModelsExhausted =
+    models.length > 0 && models.every((m) => m.exhausted);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -245,7 +76,7 @@ function ChatbotInner() {
 
   useEffect(() => {
     if (isLocal) {
-      fetch("/api/context/files")
+      fetch("/api/briefer/files")
         .then((r) => r.json())
         .then((d) => {
           if (d.repos) setRepos(d.repos);
@@ -255,10 +86,7 @@ function ChatbotInner() {
     fetch("/api/chat/models")
       .then((r) => r.json())
       .then((d) => {
-        if (d.models?.length > 0) {
-          setModels(d.models);
-          setSelectedModel(d.models[0].name);
-        }
+        if (d.models?.length > 0) setModels(d.models);
       })
       .catch(() => {});
   }, []);
@@ -290,39 +118,36 @@ function ChatbotInner() {
     return data.sessions ?? [];
   }, []);
 
-  const loadSession = useCallback(
-    async (sessionId: string, allowPublic = false) => {
-      setLoadingSession(true);
-      const res = await fetch(`/api/chat/sessions/${sessionId}`);
-      if (!res.ok) {
-        setLoadingSession(false);
-        return;
-      }
-      const data = await res.json();
-      const rawMsgs: Message[] = data.messages ?? [];
-      const msgs: Message[] = [];
-      for (const m of rawMsgs) {
-        msgs.push(m);
-        if (m.role === "system") {
-          const text = messageText(m.content);
-          const fileCount = (text.match(/# FILE:/g) ?? []).length;
-          msgs.push({
-            role: "assistant",
-            content: `[Context loaded: ${fileCount} file(s)]`,
-          });
-        }
-      }
-      setMessages(msgs);
-      setLimitReached(rawMsgs.length >= 100);
-      if (data.session) {
-        setActiveSession(data.session);
-        setRepoPath(data.session.repo_path ?? null);
-        if (data.session.model) setSelectedModel(data.session.model);
-      }
+  const loadSession = useCallback(async (sessionId: string) => {
+    setLoadingSession(true);
+    const res = await fetch(`/api/chat/sessions/${sessionId}`);
+    if (!res.ok) {
       setLoadingSession(false);
-    },
-    [isOwner],
-  );
+      return;
+    }
+    const data = await res.json();
+    const rawMsgs: Message[] = data.messages ?? [];
+    const msgs: Message[] = [];
+    for (const m of rawMsgs) {
+      msgs.push(m);
+      if (m.role === "system") {
+        const text = typeof m.content === "string" ? m.content : "";
+        const fileCount = (text.match(/# FILE:/g) ?? []).length;
+        msgs.push({
+          role: "assistant",
+          content: `[Context loaded: ${fileCount} file(s)]`,
+        });
+      }
+    }
+    setMessages(msgs);
+    setLimitReached(rawMsgs.length >= 100);
+    if (data.session) {
+      setActiveSession(data.session);
+      setRepoPath(data.session.repo_path ?? null);
+      if (data.session.model) setSelectedModel(data.session.model);
+    }
+    setLoadingSession(false);
+  }, []);
 
   useEffect(() => {
     if (authStatus === "loading") return;
@@ -331,21 +156,21 @@ function ChatbotInner() {
       initDoneRef.current = true;
       const paramId = searchParams.get("session");
       if (paramId) {
-        await loadSession(paramId, !isOwner);
+        await loadSession(paramId);
         await loadSessions();
         return;
       }
       const list = await loadSessions();
-      if (list.length > 0) await loadSession(list[0].id, !isOwner);
+      if (list.length > 0) await loadSession(list[0].id);
     }
     init();
-  }, [authStatus, isOwner, loadSession, loadSessions, searchParams]);
+  }, [authStatus, loadSession, loadSessions, searchParams]);
 
   async function createSession(
     firstMessage: string,
     rp: string | null,
     model: string,
-  ): Promise<Session | null> {
+  ): Promise<ChatSession | null> {
     const res = await fetch("/api/chat/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -427,6 +252,8 @@ function ChatbotInner() {
     if ((!text && !pendingImage) || streaming || limitReached) return;
     setInput("");
     setStreaming(true);
+    setNoModelsAvailable(false);
+
     const userContent: ContentPart[] | string = pendingImage
       ? [
           ...(text ? [{ type: "text" as const, text }] : []),
@@ -434,6 +261,7 @@ function ChatbotInner() {
         ]
       : text;
     setPendingImage(null);
+
     let session = activeSession;
     if (!session) {
       session = await createSession(text || "Image", repoPath, selectedModel);
@@ -445,6 +273,7 @@ function ChatbotInner() {
         }
       }
     }
+
     if (session) {
       const saved = await saveMessage(session.id, "user", text || "[image]");
       if (!saved) {
@@ -452,6 +281,7 @@ function ChatbotInner() {
         return;
       }
     }
+
     const userMsg: Message = { role: "user", content: userContent };
     const sendMessages = messages
       .filter(
@@ -464,11 +294,14 @@ function ChatbotInner() {
       )
       .concat(userMsg)
       .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages([...messages, userMsg]);
     const assistantIndex = messages.length + 1;
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
     const controller = new AbortController();
     abortRef.current = controller;
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -479,23 +312,46 @@ function ChatbotInner() {
         }),
         signal: controller.signal,
       });
+
+      if (res.status === 503) {
+        setNoModelsAvailable(true);
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[assistantIndex] = {
+            role: "assistant",
+            content: "No models available.",
+          };
+          return updated;
+        });
+        setStreaming(false);
+        return;
+      }
+
       if (!res.ok || !res.body) throw new Error("request failed");
+
+      const usedModel = res.headers.get("X-Model-Used") ?? "";
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let accumulated = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         accumulated += decoder.decode(value, { stream: true });
         setMessages((prev) => {
           const updated = [...prev];
-          updated[assistantIndex] = { role: "assistant", content: accumulated };
+          updated[assistantIndex] = {
+            role: "assistant",
+            content: accumulated,
+            modelUsed: usedModel,
+          };
           return updated;
         });
       }
+
       if (session) await saveMessage(session.id, "assistant", accumulated);
     } catch (e: unknown) {
-      if (e instanceof Error && e.name !== "AbortError")
+      if (e instanceof Error && e.name !== "AbortError") {
         setMessages((prev) => {
           const updated = [...prev];
           updated[assistantIndex] = {
@@ -504,6 +360,7 @@ function ChatbotInner() {
           };
           return updated;
         });
+      }
     } finally {
       abortRef.current = null;
       setStreaming(false);
@@ -519,11 +376,13 @@ function ChatbotInner() {
     setContextInfo(null);
     setInjectedFiles(new Set());
     setPendingImage(null);
+    setNoModelsAvailable(false);
     if (isOwner) router.replace("/tools/chatbot");
     setMobileDrawerOpen(false);
+    setSelectedModel("");
   }
 
-  async function handleSelectSession(s: Session) {
+  async function handleSelectSession(s: ChatSession) {
     router.replace(`/tools/chatbot?session=${s.id}`);
     await loadSession(s.id);
     setContextInfo(null);
@@ -592,23 +451,25 @@ function ChatbotInner() {
               </p>
             </div>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap">
-            {models.length > 0 && !activeSession && (
+            {models.length > 0 && !sessionStarted && (
               <select
                 className="input-base text-xs py-1.5"
-                style={{ width: 180 }}
+                style={{ width: 220 }}
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
               >
+                <option value="">LLM Model: Auto</option>
                 {models.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.provider === "groq" ? "Groq: " : "Ollama: "}
+                  <option key={m.name} value={m.name} disabled={m.exhausted}>
                     {m.name}
+                    {m.exhausted ? " (exhausted)" : ""}
                   </option>
                 ))}
               </select>
             )}
-            {activeSession?.model && (
+            {sessionStarted && activeSession?.model && (
               <span
                 className="text-xs font-mono px-2 py-1 rounded"
                 style={{
@@ -617,6 +478,17 @@ function ChatbotInner() {
                 }}
               >
                 {activeSession.model}
+              </span>
+            )}
+            {allModelsExhausted && (
+              <span
+                className="text-xs font-mono px-2 py-1 rounded"
+                style={{
+                  background: "rgba(239,68,68,0.1)",
+                  color: "rgb(239,68,68)",
+                }}
+              >
+                No models available
               </span>
             )}
             {isLocal && repos.length > 0 && isOwner && !isFromCodeBriefer && (
@@ -750,158 +622,9 @@ function ChatbotInner() {
                   </p>
                 </div>
               ) : (
-                messages.map((m, i) => {
-                  if (m.role === "system") return null;
-                  const text = messageText(m.content);
-                  const isContextNote = text.startsWith("[Context loaded");
-                  const imagePart = Array.isArray(m.content)
-                    ? (m.content.find((p) => p.type === "image_url") as
-                        | { type: "image_url"; image_url: { url: string } }
-                        | undefined)
-                    : undefined;
-                  return (
-                    <div
-                      key={i}
-                      className={`flex group items-start gap-1.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed${m.role === "user" || isContextNote ? " whitespace-pre-wrap" : ""}`}
-                        style={
-                          isContextNote
-                            ? {
-                                background: "var(--accent-dim)",
-                                color: "var(--accent)",
-                                borderRadius: 8,
-                                fontSize: 11,
-                                fontFamily: "monospace",
-                              }
-                            : m.role === "user"
-                              ? {
-                                  background: "var(--accent)",
-                                  color: "#fff",
-                                  borderBottomRightRadius: 4,
-                                }
-                              : {
-                                  background: "var(--bg)",
-                                  border: "1px solid var(--border)",
-                                  color: "var(--secondary)",
-                                  borderBottomLeftRadius: 4,
-                                }
-                        }
-                      >
-                        {imagePart && (
-                          <img
-                            src={imagePart.image_url.url}
-                            alt="attached"
-                            className="rounded-lg mb-2 max-w-full"
-                            style={{ maxHeight: 240, objectFit: "contain" }}
-                          />
-                        )}
-                        {!text && !imagePart ? (
-                          <span className="flex gap-1 items-center">
-                            {[0, 150, 300].map((d) => (
-                              <span
-                                key={d}
-                                className="w-1.5 h-1.5 rounded-full animate-bounce"
-                                style={{
-                                  background: "var(--muted)",
-                                  animationDelay: `${d}ms`,
-                                }}
-                              />
-                            ))}
-                          </span>
-                        ) : m.role === "assistant" && !isContextNote ? (
-                          <div
-                            className="text-sm leading-relaxed markdown-body"
-                            style={{ color: "inherit" }}
-                          >
-                            <ReactMarkdown
-                              components={{
-                                code: ({ className, children }) => {
-                                  const isBlock =
-                                    String(children).includes("\n");
-                                  return isBlock ? (
-                                    <pre
-                                      style={{
-                                        background: "var(--bg)",
-                                        border: "1px solid var(--border)",
-                                        borderRadius: 6,
-                                        padding: "8px 10px",
-                                        overflowX: "auto",
-                                        margin: "6px 0",
-                                        fontSize: 12,
-                                        fontFamily: "monospace",
-                                        lineHeight: 1.5,
-                                      }}
-                                    >
-                                      <code
-                                        className={className}
-                                        style={{ fontFamily: "monospace" }}
-                                      >
-                                        {children}
-                                      </code>
-                                    </pre>
-                                  ) : (
-                                    <code
-                                      style={{
-                                        background: "var(--border)",
-                                        borderRadius: 3,
-                                        padding: "1px 4px",
-                                        fontSize: 12,
-                                        fontFamily: "monospace",
-                                      }}
-                                    >
-                                      {children}
-                                    </code>
-                                  );
-                                },
-                                strong: ({ children }) => (
-                                  <strong style={{ fontWeight: 600 }}>
-                                    {children}
-                                  </strong>
-                                ),
-                                blockquote: ({ children }) => (
-                                  <blockquote
-                                    style={{
-                                      borderLeft: "2px solid var(--accent)",
-                                      paddingLeft: 10,
-                                      margin: "4px 0",
-                                      color: "var(--muted)",
-                                      fontStyle: "italic",
-                                    }}
-                                  >
-                                    {children}
-                                  </blockquote>
-                                ),
-                              }}
-                            >
-                              {text}
-                            </ReactMarkdown>
-                          </div>
-                        ) : (
-                          text
-                        )}
-                        {isLocal &&
-                          m.role === "assistant" &&
-                          text &&
-                          repoPath &&
-                          !isContextNote && (
-                            <ApplyButton content={text} repoPath={repoPath} />
-                          )}
-                        {text && !isContextNote && (
-                          <div
-                            style={{
-                              marginTop: 6,
-                              textAlign: m.role === "user" ? "right" : "left",
-                            }}
-                          >
-                            <CopyButton text={text} />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                messages.map((m, i) => (
+                  <MessageBubble key={i} message={m} repoPath={repoPath} />
+                ))
               )}
               <div ref={bottomRef} />
             </div>
@@ -912,6 +635,15 @@ function ChatbotInner() {
                 style={{ color: "rgb(239,68,68)" }}
               >
                 Message limit reached (100). Start a new chat.
+              </p>
+            )}
+            {noModelsAvailable && (
+              <p
+                className="text-xs font-mono text-center mb-2 flex-shrink-0"
+                style={{ color: "rgb(239,68,68)" }}
+              >
+                No models available. All quota exhausted — resets at{" "}
+                {process.env.NEXT_PUBLIC_WIB_RESET_HOUR ?? "8"} AM WIB.
               </p>
             )}
 
@@ -984,6 +716,7 @@ function ChatbotInner() {
                   />
                 </svg>
               </button>
+
               <textarea
                 ref={textareaRef}
                 className="input-base flex-1 resize-none"
@@ -997,7 +730,9 @@ function ChatbotInner() {
                 placeholder={
                   limitReached
                     ? "Limit reached — start a new chat"
-                    : "Type a message… (Enter to send, Shift+Enter for newline)"
+                    : allModelsExhausted
+                      ? `No models available — resets at ${process.env.NEXT_PUBLIC_WIB_RESET_HOUR ?? "8"} AM WIB`
+                      : "Type a message… (Enter to send, Shift+Enter for newline)"
                 }
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -1007,8 +742,9 @@ function ChatbotInner() {
                     handleSend();
                   }
                 }}
-                disabled={streaming || limitReached}
+                disabled={streaming || limitReached || allModelsExhausted}
               />
+
               {streaming ? (
                 <button
                   onClick={() => abortRef.current?.abort()}
@@ -1023,11 +759,17 @@ function ChatbotInner() {
               ) : (
                 <button
                   onClick={handleSend}
-                  disabled={(!input.trim() && !pendingImage) || limitReached}
+                  disabled={
+                    (!input.trim() && !pendingImage) ||
+                    limitReached ||
+                    allModelsExhausted
+                  }
                   className="btn-primary py-2 px-4 flex-shrink-0"
                   style={{
                     opacity:
-                      (!input.trim() && !pendingImage) || limitReached
+                      (!input.trim() && !pendingImage) ||
+                      limitReached ||
+                      allModelsExhausted
                         ? 0.5
                         : 1,
                   }}

@@ -12,64 +12,35 @@ export function summarizeFile(filePath: string, content: string): string {
 
 function stripSignature(line: string): string {
   const trimmed = line.trim();
-
   const funcMatch = trimmed.match(
     /^(export\s+)?(async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
   );
-  if (funcMatch) {
-    const exported = funcMatch[1] ?? "";
-    const async_ = funcMatch[2] ?? "";
-    const name = funcMatch[3];
-    return `${exported}${async_}function ${name}`;
-  }
-
+  if (funcMatch)
+    return `${funcMatch[1] ?? ""}${funcMatch[2] ?? ""}function ${funcMatch[3]}`;
   const arrowConstMatch = trimmed.match(
     /^(export\s+)?const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*[=:(<]/,
   );
-  if (arrowConstMatch) {
-    const exported = arrowConstMatch[1] ?? "";
-    const name = arrowConstMatch[2];
-    return `${exported}const ${name}`;
-  }
-
+  if (arrowConstMatch)
+    return `${arrowConstMatch[1] ?? ""}const ${arrowConstMatch[2]}`;
   const letVarMatch = trimmed.match(
     /^(export\s+)?(let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*[=:(<]/,
   );
-  if (letVarMatch) {
-    const exported = letVarMatch[1] ?? "";
-    const kind = letVarMatch[2];
-    const name = letVarMatch[3];
-    return `${exported}${kind} ${name}`;
-  }
-
+  if (letVarMatch)
+    return `${letVarMatch[1] ?? ""}${letVarMatch[2]} ${letVarMatch[3]}`;
   const typeMatch = trimmed.match(
     /^(export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
   );
-  if (typeMatch) {
-    const exported = typeMatch[1] ?? "";
-    const name = typeMatch[2];
-    return `${exported}type ${name}`;
-  }
-
+  if (typeMatch) return `${typeMatch[1] ?? ""}type ${typeMatch[2]}`;
   const interfaceMatch = trimmed.match(
     /^(export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
   );
-  if (interfaceMatch) {
-    const exported = interfaceMatch[1] ?? "";
-    const name = interfaceMatch[2];
-    return `${exported}interface ${name}`;
-  }
-
+  if (interfaceMatch)
+    return `${interfaceMatch[1] ?? ""}interface ${interfaceMatch[2]}`;
   const classMatch = trimmed.match(
     /^(export\s+)?(abstract\s+)?class\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
   );
-  if (classMatch) {
-    const exported = classMatch[1] ?? "";
-    const abstract_ = classMatch[2] ?? "";
-    const name = classMatch[3];
-    return `${exported}${abstract_}class ${name}`;
-  }
-
+  if (classMatch)
+    return `${classMatch[1] ?? ""}${classMatch[2] ?? ""}class ${classMatch[3]}`;
   return line;
 }
 
@@ -86,9 +57,8 @@ function summarizeJS(content: string): string {
       /^(export\s+)?interface\s+[A-Za-z_$]/.test(trimmed) ||
       /^(export\s+)?(abstract\s+)?class\s+[A-Za-z_$]/.test(trimmed) ||
       /^import\s/.test(trimmed);
-    if (isSig) {
+    if (isSig)
       result.push(/^import\s/.test(trimmed) ? line : stripSignature(line));
-    }
   }
   return result.join("\n");
 }
@@ -104,9 +74,7 @@ function summarizeCSS(content: string): string {
       !trimmed.startsWith("/*") &&
       !trimmed.startsWith("*")
     ) {
-      if (trimmed.endsWith("{") || trimmed.startsWith("@")) {
-        result.push(line);
-      }
+      if (trimmed.endsWith("{") || trimmed.startsWith("@")) result.push(line);
     }
   }
   return result.join("\n");
@@ -120,17 +88,15 @@ function summarizeVue(content: string): string {
   const result: string[] = [];
   if (templateFirstLine) result.push(`<template> ${templateFirstLine[1]}`);
   if (scriptMatch) {
-    const scriptLines = scriptMatch[1].split("\n");
-    for (const line of scriptLines) {
+    for (const line of scriptMatch[1].split("\n")) {
       const trimmed = line.trim();
       const isSig =
         /^(export\s+)?(async\s+)?function\s+/.test(trimmed) ||
         /^(export\s+)?const\s+[A-Za-z_$]/.test(trimmed) ||
         /^(export\s+)?type\s+[A-Za-z_$]/.test(trimmed) ||
         /^import\s/.test(trimmed);
-      if (isSig) {
+      if (isSig)
         result.push(/^import\s/.test(trimmed) ? line : stripSignature(line));
-      }
     }
   }
   return result.join("\n");
@@ -147,10 +113,8 @@ function summarizePython(content: string): string {
       trimmed.startsWith("class ") ||
       trimmed.startsWith("import ") ||
       trimmed.startsWith("from ");
-    if (isSig) {
-      const stripped = trimmed.replace(/\(.*/, "").replace(/:$/, "").trim();
-      result.push(stripped);
-    }
+    if (isSig)
+      result.push(trimmed.replace(/\(.*/, "").replace(/:$/, "").trim());
   }
   return result.join("\n");
 }

@@ -21,10 +21,7 @@ async function layerLLM(
   isOwner: boolean,
 ): Promise<string[]> {
   const fileList = files
-    .map((f) => {
-      if (!f.content.trim()) return null;
-      return `### ${f.path}\n${f.content}`;
-    })
+    .map((f) => (!f.content.trim() ? null : `### ${f.path}\n${f.content}`))
     .filter(Boolean)
     .join("\n\n---\n\n");
 
@@ -49,13 +46,15 @@ Reply with only a JSON array of file paths. Example: ["app/tools/text-compare/pa
 
   let raw = "";
   try {
-    raw = await generateText(fullPrompt, isOwner);
-  } catch (e) {
-    console.error("LLM error:", e);
+    const result = await generateText(
+      fullPrompt,
+      isOwner,
+      "llama-3.3-70b-versatile",
+    );
+    raw = result.text;
+  } catch {
     return [];
   }
-
-  console.log("LLM raw response:", raw);
 
   const fenceMatch = raw.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
   const bareMatch = raw.match(/\[[\s\S]*?\]/);
@@ -66,8 +65,6 @@ Reply with only a JSON array of file paths. Example: ["app/tools/text-compare/pa
     const selected: string[] = JSON.parse(jsonStr);
     const validPaths = files.map((f) => f.path);
     const validSet = new Set(validPaths);
-    console.log("LLM selected:", selected);
-
     const mapped = selected.map((p) => {
       if (validSet.has(p)) return p;
       const lower = p.toLowerCase();
@@ -78,11 +75,8 @@ Reply with only a JSON array of file paths. Example: ["app/tools/text-compare/pa
       const byName = validPaths.filter(
         (vp) => vp.split("/").pop()?.toLowerCase() === filename,
       );
-      console.log("byName for", p, "->", byName);
       return byName.length === 1 ? byName[0] : null;
     });
-
-    console.log("LLM mapped:", mapped);
     return mapped.filter((p): p is string => p !== null);
   } catch {
     return [];
@@ -91,23 +85,70 @@ Reply with only a JSON array of file paths. Example: ["app/tools/text-compare/pa
 
 function layerKeywords(prompt: string, paths: string[]): string[] {
   const stopWords = new Set([
-    "the", "a", "an", "is", "in", "on", "at", "to", "for", "of", "and", "or",
-    "but", "not", "with", "this", "that", "it", "be", "are", "was", "fix",
-    "bug", "error", "issue", "problem", "help", "need", "want", "make", "get",
-    "set", "use", "add", "update", "change", "check", "file", "files", "code",
-    "select", "when", "also", "even", "show", "should", "possible", "same",
-    "time", "fill", "once", "dont", "still", "instead", "color", "colour",
+    "the",
+    "a",
+    "an",
+    "is",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "of",
+    "and",
+    "or",
+    "but",
+    "not",
+    "with",
+    "this",
+    "that",
+    "it",
+    "be",
+    "are",
+    "was",
+    "fix",
+    "bug",
+    "error",
+    "issue",
+    "problem",
+    "help",
+    "need",
+    "want",
+    "make",
+    "get",
+    "set",
+    "use",
+    "add",
+    "update",
+    "change",
+    "check",
+    "file",
+    "files",
+    "code",
+    "select",
+    "when",
+    "also",
+    "even",
+    "show",
+    "should",
+    "possible",
+    "same",
+    "time",
+    "fill",
+    "once",
+    "dont",
+    "still",
+    "instead",
+    "color",
+    "colour",
   ]);
-
   const cleaned = stripMarkdown(prompt);
   const words = cleaned
     .toLowerCase()
     .replace(/[^a-z0-9\-_/[\]]/g, " ")
     .split(/[\s/]+/)
     .filter((w) => w.length > 1 && !stopWords.has(w));
-
   if (words.length === 0) return [];
-
   const scored = paths.map((p) => {
     const lower = p.toLowerCase();
     const segments = lower.split(/[/.\-_[\]]/);
@@ -118,10 +159,8 @@ function layerKeywords(prompt: string, paths: string[]): string[] {
     }, 0);
     return { path: p, score };
   });
-
   const max = Math.max(...scored.map((s) => s.score));
   if (max === 0) return [];
-
   return scored
     .filter((s) => s.score >= Math.max(1, max - 1))
     .map((s) => s.path);
@@ -129,56 +168,40 @@ function layerKeywords(prompt: string, paths: string[]): string[] {
 
 export async function POST(req: NextRequest) {
   const { allowed } = checkRateLimit(req, 20);
-  if (!allowed) {
+  if (!allowed)
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-  }
-
   try {
     const body = await req.text();
-    const bodyBytes = Buffer.byteLength(body, "utf8");
-    console.log("smart-select body bytes:", bodyBytes);
-
-    if (bodyBytes > MAX_PROMPT_BYTES) {
+    if (Buffer.byteLength(body, "utf8") > MAX_PROMPT_BYTES) {
       return NextResponse.json(
         { error: "Request body too large" },
         { status: 413 },
       );
     }
-
     const { prompt, files } = JSON.parse(body) as {
       prompt: string;
       files: FileEntry[];
     };
-
     if (!prompt || !Array.isArray(files)) {
       return NextResponse.json(
         { error: "prompt and files required" },
         { status: 400 },
       );
     }
-
     if (files.length > MAX_FILES) {
       return NextResponse.json(
         { error: `Too many files (max ${MAX_FILES})` },
         { status: 400 },
       );
     }
-
     const role = await getServerRole();
     const owner = isOwnerRole(role);
     const paths = files.map((f) => f.path);
-
     const llm = await layerLLM(prompt, files, owner);
-    console.log("LLM layer result:", llm);
-    if (llm.length > 0) {
-      return NextResponse.json({ selected: llm, layer: 1 });
-    }
-
+    if (llm.length > 0) return NextResponse.json({ selected: llm, layer: 1 });
     const kw = layerKeywords(prompt, paths);
-    console.log("Keyword layer result:", kw);
     return NextResponse.json({ selected: kw, layer: 2 });
-  } catch (e) {
-    console.error("smart-select error:", e);
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

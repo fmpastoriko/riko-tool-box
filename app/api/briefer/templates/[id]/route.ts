@@ -12,13 +12,10 @@ export async function PUT(
   try {
     const { id } = await params;
     const { label, body } = await req.json();
-    const [row] = await neonDb`
-      UPDATE prompt_templates SET label = ${label}, body = ${body}
-      WHERE id = ${id}
-      RETURNING *
-    `;
+    const [row] =
+      await neonDb`UPDATE prompt_templates SET label = ${label}, body = ${body} WHERE id = ${id} RETURNING *`;
     return NextResponse.json({ template: row });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -37,7 +34,7 @@ export async function DELETE(
     const { id } = await params;
     await neonDb`DELETE FROM prompt_templates WHERE id = ${id}`;
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

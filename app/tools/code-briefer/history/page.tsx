@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/formatDate";
@@ -21,7 +22,7 @@ export default function CodeBrieferHistoryPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/context/sessions")
+    fetch("/api/briefer/sessions")
       .then((r) => r.json())
       .then((data) => {
         setSessions(data.sessions);
@@ -58,7 +59,6 @@ export default function CodeBrieferHistoryPage() {
           Loading…
         </p>
       )}
-
       {error && (
         <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
           {error}

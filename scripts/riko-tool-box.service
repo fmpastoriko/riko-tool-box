@@ -1,0 +1,16 @@
+[Unit]
+Description=Riko Toolbox Next.js App
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/riko-tool-box
+ExecStart=/usr/bin/node_modules/.bin/next start
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

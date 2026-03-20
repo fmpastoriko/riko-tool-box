@@ -10,15 +10,9 @@ export async function GET(req: NextRequest) {
     const role = await getServerRole();
     const owner = isOwnerRole(role);
     const hashedIp = sha256(getIp(req));
-
-    const rows = await neonDb`
-      SELECT id, text_a, text_b, created_at, hashed_ip
-      FROM comparisons
-      ORDER BY created_at DESC
-      LIMIT 100
-    `;
-
-    const comparisons = rows.map((row) => {
+    const rows =
+      await neonDb`SELECT id, text_a, text_b, created_at, hashed_ip FROM comparisons ORDER BY created_at DESC LIMIT 100`;
+const comparisons = rows.map((row) => {
       const isOwn = owner || row.hashed_ip === hashedIp;
       if (isOwn) {
         return {
@@ -33,6 +27,7 @@ export async function GET(req: NextRequest) {
           is_own: true,
         };
       }
+    
       return {
         id: row.id,
         text_a: "···",
@@ -41,9 +36,8 @@ export async function GET(req: NextRequest) {
         is_own: false,
       };
     });
-
     return NextResponse.json({ authenticated: owner, comparisons });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

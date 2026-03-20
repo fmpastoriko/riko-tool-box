@@ -7,7 +7,6 @@ interface RateLimitEntry {
 }
 
 const store = new Map<string, RateLimitEntry>();
-
 const WINDOW_MS = 60_000;
 
 export function checkRateLimit(
@@ -17,16 +16,13 @@ export function checkRateLimit(
   const ip = getIp(req);
   const now = Date.now();
   const entry = store.get(ip);
-
   if (!entry || now > entry.resetAt) {
     store.set(ip, { count: 1, resetAt: now + WINDOW_MS });
     return { allowed: true, remaining: maxPerWindow - 1 };
   }
-
   if (entry.count >= maxPerWindow) {
     return { allowed: false, remaining: 0 };
   }
-
   entry.count++;
   return { allowed: true, remaining: maxPerWindow - entry.count };
 }

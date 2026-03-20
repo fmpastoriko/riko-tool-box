@@ -22,15 +22,8 @@ export async function GET(req: NextRequest) {
     const owner = isOwnerRole(role);
     const hashedIp = sha256(getIp(req));
     const rows = await neonDb`
-      SELECT
-        s.id,
-        s.prompt_label,
-        s.prompt_body,
-        s.additional_prompt,
-        s.files_selected,
-        s.created_at,
-        s.hashed_ip,
-        o.text_output
+      SELECT s.id, s.prompt_label, s.prompt_body, s.additional_prompt, s.files_selected,
+             s.created_at, s.hashed_ip, o.text_output
       FROM context_sessions s
       LEFT JOIN context_outputs o ON o.session_id = s.id
       ORDER BY s.created_at DESC
@@ -71,7 +64,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json({ authenticated: owner, sessions });
   } catch (e) {
-    console.error("GET /api/context/sessions error:", e);
+    console.error("GET /api/briefer/sessions error:", e);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -110,33 +103,16 @@ export async function POST(req: NextRequest) {
     const userId = owner ? (process.env.OWNER_EMAIL ?? null) : null;
     const [session] = await neonDb`
       INSERT INTO context_sessions (prompt_label, prompt_body, additional_prompt, files_selected, llm_suggestion, user_id, hashed_ip)
-      VALUES (
-        ${prompt_label},
-        ${encryptIfOwner(prompt_body, owner)},
-        ${encryptIfOwner(additional_prompt ?? null, owner)},
-        ${JSON.stringify(files_selected)},
-        ${encryptIfOwner(llm_suggestion ?? null, owner)},
-        ${userId},
-        ${hashedIp}
-      )
+      VALUES (${prompt_label}, ${encryptIfOwner(prompt_body, owner)}, ${encryptIfOwner(additional_prompt ?? null, owner)},
+              ${JSON.stringify(files_selected)}, ${encryptIfOwner(llm_suggestion ?? null, owner)}, ${userId}, ${hashedIp})
       RETURNING id
     `;
     if (text_output) {
-      await neonDb`
-        INSERT INTO context_outputs (session_id, text_output, user_id)
-        VALUES (${session.id}, ${encryptIfOwner(text_output, owner)}, ${userId})
-      `;
-      await neonDb`
-        DELETE FROM context_outputs
-        WHERE session_id NOT IN (
-          SELECT id FROM context_sessions
-          ORDER BY created_at DESC
-          LIMIT 100
-        )
-      `;
+      await neonDb`INSERT INTO context_outputs (session_id, text_output, user_id) VALUES (${session.id}, ${encryptIfOwner(text_output, owner)}, ${userId})`;
+      await neonDb`DELETE FROM context_outputs WHERE session_id NOT IN (SELECT id FROM context_sessions ORDER BY created_at DESC LIMIT 100)`;
     }
     return NextResponse.json({ id: session.id });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

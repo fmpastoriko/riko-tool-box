@@ -40,12 +40,18 @@ export function decrypt(ciphertext: string): string {
   return decipher.update(encrypted) + decipher.final("utf8");
 }
 
-export function encryptIfOwner(value: string | null | undefined, isOwner: boolean): string | null {
+export function encryptIfOwner(
+  value: string | null | undefined,
+  isOwner: boolean,
+): string | null {
   if (value == null) return null;
   return isOwner ? encrypt(value) : value;
 }
 
-export function decryptIfOwner(value: string | null | undefined, isOwner: boolean): string | null {
+export function decryptIfOwner(
+  value: string | null | undefined,
+  isOwner: boolean,
+): string | null {
   if (value == null) return null;
   return isOwner ? decrypt(value) : value;
 }

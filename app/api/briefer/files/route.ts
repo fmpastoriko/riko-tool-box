@@ -1,37 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { DEFAULT_EXTS, IGNORED_DIRS } from "@/config/fileExtensions";
 
 const CONFIG_PATH = path.join(process.cwd(), "config", "repos.config.json");
-
-const IGNORED_DIRS = new Set([
-  "node_modules",
-  ".next",
-  ".git",
-  "dist",
-  "build",
-  "out",
-  ".vercel",
-  "__pycache__",
-  ".pytest_cache",
-  "coverage",
-  ".cache",
-]);
-
-const DEFAULT_EXTS = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".py",
-  ".vue",
-  ".css",
-  ".sql",
-  ".json",
-  ".md",
-  ".gitignore",
-]);
 
 function matchesExt(name: string, exts: Set<string>): boolean {
   const ext = path.extname(name).toLowerCase();
@@ -93,13 +65,16 @@ export async function POST(req: NextRequest) {
       repoPath: string;
       extensions?: string[];
     };
+
     if (!repoPath)
       return NextResponse.json({ error: "repoPath required" }, { status: 400 });
+
     if (!fs.existsSync(CONFIG_PATH))
       return NextResponse.json(
         { error: "repos.config.json not found" },
         { status: 404 },
       );
+
     const repos: { label: string; path: string }[] = JSON.parse(
       fs.readFileSync(CONFIG_PATH, "utf-8"),
     );
@@ -109,10 +84,12 @@ export async function POST(req: NextRequest) {
         { error: "Repo not in allowlist" },
         { status: 403 },
       );
+
     const exts =
       extensions && extensions.length > 0
         ? new Set(extensions.map((e) => (e.startsWith(".") ? e : `.${e}`)))
-        : DEFAULT_EXTS;
+        : new Set(DEFAULT_EXTS);
+
     const files = walkDir(repoPath, repoPath, exts);
     return NextResponse.json({ files });
   } catch {

@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/formatDate";
@@ -81,7 +82,6 @@ export default function TextCompareHistoryPage() {
           Loading…
         </p>
       )}
-
       {error && (
         <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
           {error}

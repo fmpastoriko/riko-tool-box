@@ -7,12 +7,9 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    await neonDb`
-      UPDATE prompt_templates SET used_count = used_count + 1
-      WHERE id = ${id}
-    `;
+    await neonDb`UPDATE prompt_templates SET used_count = used_count + 1 WHERE id = ${id}`;
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

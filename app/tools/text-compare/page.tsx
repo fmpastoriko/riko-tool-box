@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { diffLines, diffChars, type Change } from "diff";
@@ -351,6 +352,7 @@ function TextCompareInner() {
               ))}
             </div>
           </div>
+
           <div
             className="flex-1 rounded-xl overflow-hidden flex flex-col min-h-0"
             style={{

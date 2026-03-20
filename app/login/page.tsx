@@ -1,16 +1,15 @@
 "use client";
+
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function LoginPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/");
-    }
+    if (status === "authenticated") router.replace("/");
   }, [status, router]);
 
   if (status === "loading") {
@@ -38,7 +37,6 @@ export default function LoginPage() {
             Sign in to access persistent sessions and full history.
           </p>
         </div>
-
         <button
           onClick={() => signIn("google", { callbackUrl: "/" })}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border transition-all duration-150 hover:border-[var(--accent)]"
@@ -68,7 +66,6 @@ export default function LoginPage() {
           </svg>
           <span className="text-sm font-medium">Continue with Google</span>
         </button>
-
         <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
           Access is restricted to authorised accounts only.
         </p>

@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Timeline from "@/components/Timeline";
@@ -450,20 +451,17 @@ export default function HomePage() {
               </p>
             </div>
           </div>
-
           <p
             className="text-base leading-relaxed"
             style={{ color: "var(--secondary)" }}
           >
             {BIO_TEXT}
           </p>
-
           <div>
             <p className="section-label mb-2">Toolbox</p>
             <ToolGrid />
           </div>
         </div>
-
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
           <div className="flex items-baseline gap-2 mb-3 flex-shrink-0">
             <p className="section-label mb-0">Experience</p>
