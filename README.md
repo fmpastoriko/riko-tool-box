@@ -60,9 +60,9 @@ This site serves a dual purpose: it introduces the developer's background and ca
 | Next.js API Routes | Backend endpoints | Active |
 | Neon PostgreSQL | Single DB — owner data encrypted, public data plaintext | Active |
 | Google OAuth | Owner authentication | Active |
-| Groq API (owner keys) | LLM for owner requests — multiple keys with auto-rotation | Active |
+| Groq API (owner keys) | LLM for owner requests | Active |
 | Groq API (public key) | LLM for unauthenticated requests | Active |
-| Gemini API (owner keys) | LLM for owner requests — multiple keys with auto-rotation | Active |
+| Gemini API (owner keys) | LLM for owner requests | Active |
 | Ollama (optional) | Local LLM fallback when OLLAMA_URL is set | Active |
 | systemd | Local autostart + service management | Active |
 | pdf-lib | PDF generation for puzzle exports | Planned |
