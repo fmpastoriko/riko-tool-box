@@ -301,6 +301,15 @@ export default function CodeBrieferPage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [folderInputKey, setFolderInputKey] = useState(0);
   const [folderProgress, setFolderProgress] = useState<number | null>(null);
+  const [waitingForPick, setWaitingForPick] = useState(false);
+
+  useEffect(() => {
+  const input = folderInputRef.current;
+  if (!input) return;
+  const onCancel = () => setWaitingForPick(false);
+  input.addEventListener("cancel", onCancel);
+  return () => input.removeEventListener("cancel", onCancel);
+}, []);
 
   function toggleFullContext(filePath: string) {
     setFullContextFiles((prev) => {
@@ -537,16 +546,21 @@ export default function CodeBrieferPage() {
     } catch (e) {
       setRepoError(String(e));
     } finally {
+      setFolderProgress(null);
       setLoadingFiles(false);
     }
   }
 
   async function handleFolderPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      setFolderProgress(null);
+      return;
+    }
 
-    setLoadingFiles(true);
+    setWaitingForPick(false);
     setFolderProgress(0);
+    setLoadingFiles(true);
     setAllFiles([]);
     setFileContents(new Map());
     setSelectedFiles(new Set());
@@ -990,6 +1004,9 @@ export default function CodeBrieferPage() {
                     webkitdirectory: "",
                   } as React.InputHTMLAttributes<HTMLInputElement>)}
                   onChange={handleFolderPick}
+                  onClick={() => {
+                    setWaitingForPick(true);
+                  }}
                 />
                 <button
                   onClick={() => folderInputRef.current?.click()}
@@ -998,30 +1015,27 @@ export default function CodeBrieferPage() {
                 >
                   {loadingFiles
                     ? "Reading…"
-                    : selectedRepo
-                      ? `📁 ${selectedRepo.label}`
-                      : "Pick Folder"}
+                    : waitingForPick
+                      ? "Waiting…"
+                      : selectedRepo
+                        ? `📁 ${selectedRepo.label}`
+                        : "Pick Folder"}
                 </button>
                 {folderProgress !== null && (
-                  <div className="space-y-1">
+                  <div
+                    className="w-full rounded-full overflow-hidden"
+                    style={{ height: 3, background: "var(--border)" }}
+                  >
                     <div
-                      className="w-full rounded-full overflow-hidden"
-                      style={{ height: 4, background: "var(--border)" }}
-                    >
-                      <div
-                        className="h-full rounded-full transition-all duration-150"
-                        style={{
-                          width: `${folderProgress}%`,
-                          background: "var(--accent)",
-                        }}
-                      />
-                    </div>
-                    <p
-                      className="text-xs font-mono"
-                      style={{ color: "var(--muted)" }}
-                    >
-                      {folderProgress}%
-                    </p>
+                      className="h-full rounded-full"
+                      style={{
+                        width: "100%",
+                        background:
+                          "linear-gradient(90deg, var(--accent) 25%, color-mix(in srgb, var(--accent) 30%, transparent) 50%, var(--accent) 75%)",
+                        backgroundSize: "200% 100%",
+                        animation: "shimmer 1.2s infinite linear",
+                      }}
+                    />
                   </div>
                 )}
               </div>
