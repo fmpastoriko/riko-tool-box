@@ -5,8 +5,13 @@ import { createPortal } from "react-dom";
 import Timeline from "@/components/Timeline";
 import Link from "next/link";
 
+const is_local = process.env.NEXT_PUBLIC_LOCAL === "true";
+
 const BIO_TEXT =
-  "Welcome! This site is meant as a showcase for my work and my capability, while also as my personal tool-box. Most of these tools were originally built for my own use, so things might feel a bit jumbled lol. Still, I hope they give a good sense of what I can do as a Software Engineer, Data Engineer, and/or Data Analyst.";
+  "Welcome! This site is meant as a showcase for my work and my capability, while also as my personal tool-box.\nMost of these tools were originally built for my own use, so things might feel a bit jumbled lol.\nStill, I hope they give a good sense of what I can do as a Software Engineer, Data Engineer, and/or Data Analyst.";
+
+const WARNING_TEXT =
+  "WARNING!!! For demo/portfolio purpose only. Don’t enter sensitive data. For real use, run it locally (clone the repo). Reach out if you need help.";
 
 type IconType =
   | "chatbot"
@@ -451,12 +456,17 @@ export default function HomePage() {
               </p>
             </div>
           </div>
-          <p
-            className="text-base leading-relaxed"
+          <div
+            className="text-base leading-relaxed whitespace-pre-line"
             style={{ color: "var(--secondary)" }}
           >
             {BIO_TEXT}
-          </p>
+            {!is_local && (
+              <div style={{ marginTop: 10, color: "red", fontWeight: "bold" }}>
+                {WARNING_TEXT}
+              </div>
+            )}
+          </div>
           <div>
             <p className="section-label mb-2">Toolbox</p>
             <ToolGrid />
