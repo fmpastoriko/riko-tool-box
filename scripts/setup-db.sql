@@ -1,5 +1,5 @@
 -- =============================================================================
--- Riko Toolbox — Database Migration
+-- Riko Toolbox: Database Migration
 -- Run this in your Neon SQL editor to set up the full schema from scratch.
 -- Safe to re-run: all statements use IF NOT EXISTS / ON CONFLICT DO NOTHING.
 -- =============================================================================
@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_comparisons_hashed_ip  ON comparisons (hashed_ip)
 
 
 -- -----------------------------------------------------------------------------
--- Code Briefer — Prompt Templates
+-- Code Briefer: Prompt Templates
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS prompt_templates (
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
 
 CREATE INDEX IF NOT EXISTS idx_prompt_templates_used ON prompt_templates (used_count DESC, sort_order ASC);
 
--- Default templates (idempotent — skipped if label already exists)
+-- Default templates (idempotent: skipped if label already exists)
 INSERT INTO prompt_templates (label, body, sort_order) VALUES
   ('Issues',      'Review this code for bugs and potential issues',                                                       1),
   ('Bug Fix',     'Fix the bug described in the additional prompt',                                                        2),
@@ -63,7 +63,7 @@ ON CONFLICT DO NOTHING;
 
 
 -- -----------------------------------------------------------------------------
--- Code Briefer — Sessions & Outputs
+-- Code Briefer: Sessions & Outputs
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS context_sessions (
@@ -95,7 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_context_outputs_created_at  ON context_outputs (c
 
 
 -- -----------------------------------------------------------------------------
--- Chatbot — Sessions & Messages
+-- Chatbot: Sessions & Messages
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS chat_sessions (

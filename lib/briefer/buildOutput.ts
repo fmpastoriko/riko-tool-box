@@ -15,11 +15,11 @@ If you need to tell me something, tell me through chat.
 
 Before doing anything, explain your plan first and ask for my permission and input.
 
-If you are in doubt, always ask me first — do not assume.
+If you are in doubt, always ask me first, do not assume.
 
 Do not make up non-existent problems for the sake of feedback. If the code is good enough, say so.
 
-Do not use m-dash.`.trim();
+SERIOUSLY, DO NOT USE M-DASH.`.trim();
 
 export const DEFAULT_PROMPT =
   "This is the summary of codebase. Tell me which files you need the full version to do the following task";

@@ -5,7 +5,7 @@ const tools = [
     href: "/tools/text-compare",
     title: "Text Compare",
     description:
-      "Paste two text blocks and see exactly what changed — side-by-side split view with inline character diff. Save comparisons and share via permalink.",
+      "Paste two text blocks and see exactly what changed; side-by-side split view with inline character diff. Save comparisons and share via permalink.",
     demonstrates: ["Myers diff", "jsdiff", "Save & Share", "DB"],
     mediumUrl:
       "https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c",

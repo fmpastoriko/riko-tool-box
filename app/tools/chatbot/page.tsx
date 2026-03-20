@@ -68,7 +68,7 @@ function ChatbotInner() {
     if (!hasUnsavedMessages) return;
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
-      e.returnValue = "You're not signed in — your messages will be lost.";
+      e.returnValue = "You're not signed in; your messages will be lost.";
     }
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -642,7 +642,7 @@ function ChatbotInner() {
                 className="text-xs font-mono text-center mb-2 flex-shrink-0"
                 style={{ color: "rgb(239,68,68)" }}
               >
-                No models available. All quota exhausted — resets at{" "}
+                No models available. All quota exhausted, resets at{" "}
                 {process.env.NEXT_PUBLIC_WIB_RESET_HOUR ?? "8"} AM WIB.
               </p>
             )}
@@ -729,9 +729,9 @@ function ChatbotInner() {
                 rows={1}
                 placeholder={
                   limitReached
-                    ? "Limit reached — start a new chat"
+                    ? "Limit reached; start a new chat"
                     : allModelsExhausted
-                      ? `No models available — resets at ${process.env.NEXT_PUBLIC_WIB_RESET_HOUR ?? "8"} AM WIB`
+                      ? `No models available; resets at ${process.env.NEXT_PUBLIC_WIB_RESET_HOUR ?? "8"} AM WIB`
                       : "Type a message… (Enter to send, Shift+Enter for newline)"
                 }
                 value={input}

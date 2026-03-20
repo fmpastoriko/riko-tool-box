@@ -3,10 +3,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import RepoFileTree, {
-  DEFAULT_EXTS,
-  EXT_GROUPS,
-} from "@/components/RepoFileTree";
+import RepoFileTree from "@/components/RepoFileTree";
+import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
 import FileTreeBase from "@/components/FileTreeBase";
 import LlmSuggestionPanel from "@/components/briefer/LlmSuggestionPanel";
 import OutputPanel from "@/components/briefer/OutputPanel";
@@ -1087,7 +1085,7 @@ export default function CodeBrieferPage() {
             </div>
             <div className="flex gap-2">
               <div className="flex-1 flex flex-col gap-1">
-                <div className="flex justify-end gap-1">
+                <div className="flex justify-start gap-1">
                   <button
                     onClick={() => {
                       setPromptBody(DEFAULT_PROMPT);
@@ -1106,7 +1104,7 @@ export default function CodeBrieferPage() {
                         : "transparent",
                     }}
                   >
-                    Default
+                    Default 1
                   </button>
                   <button
                     onClick={() => {
@@ -1126,7 +1124,7 @@ export default function CodeBrieferPage() {
                         : "transparent",
                     }}
                   >
-                    Default 1
+                    Default 2
                   </button>
                 </div>
                 <textarea

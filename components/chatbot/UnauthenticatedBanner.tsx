@@ -17,7 +17,7 @@ export default function UnauthenticatedBanner({
     >
       <p className="text-xs font-mono" style={{ color: "var(--accent)" }}>
         {hasMessages
-          ? "You're not signed in — your chat is tied to your IP."
+          ? "You're not signed in; your chat is tied to your IP."
           : "Sign in to keep your chat history privately."}
       </p>
       <button

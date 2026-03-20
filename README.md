@@ -58,12 +58,11 @@ This site serves a dual purpose: it introduces the developer's background and ca
 |---|---|---|
 | Vercel | Hosting + CI/CD via GitHub | Active |
 | Next.js API Routes | Backend endpoints | Active |
-| Neon PostgreSQL | Single DB — owner data encrypted, public data plaintext | Active |
+| Neon PostgreSQL | Single DB, owner data encrypted, public data plaintext | Active |
 | Google OAuth | Owner authentication | Active |
 | Groq API (owner keys) | LLM for owner requests | Active |
 | Groq API (public key) | LLM for unauthenticated requests | Active |
 | Gemini API (owner keys) | LLM for owner requests | Active |
-| Ollama (optional) | Local LLM fallback when OLLAMA_URL is set | Active |
 | systemd | Local autostart + service management | Active |
 | pdf-lib | PDF generation for puzzle exports | Planned |
 | YouTube Data API v3 | Hololive data ingestion | Planned |
@@ -71,7 +70,7 @@ This site serves a dual purpose: it introduces the developer's background and ca
 
 ### 2.3 Auth & Access Control
 
-Two states only — unauthenticated and owner. No guest role.
+Two states only, unauthenticated and owner. No guest role.
 
 | State | Identity | Encryption | History |
 |---|---|---|---|
@@ -133,7 +132,7 @@ Owner is determined by matching the Google account email against `OWNER_EMAIL`. 
 |---|---|
 | comparisons | id (uuid), text_a, text_b, user_id, hashed_ip, created_at |
 
-Owner data is encrypted at rest. Raw IPs are never stored — SHA-256 hash used as `user_id` for unauthenticated sessions.
+Owner data is encrypted at rest. Raw IPs are never stored, SHA-256 hash used as `user_id` for unauthenticated sessions.
 
 ---
 
@@ -144,7 +143,7 @@ Owner data is encrypted at rest. Raw IPs are never stored — SHA-256 hash used 
 | Purpose | Join code files + prompt into a single LLM context block |
 | Local mode | Repo dropdown from `repos.config.json` (gitignored); Apply Changes writes to disk |
 | Hosted mode | File upload; token hard block at 11,000 |
-| LLM | Smart Select + suggestion via unified LLM client (Ollama or Groq/Gemini) |
+| LLM | Smart Select + suggestion via unified LLM client (Groq/Gemini) |
 | File summariser | Strips function bodies to signatures by default; per-file Full Context toggle |
 | Apply Changes | Extension allowlist enforced server-side; ambiguous From snippets rejected |
 
@@ -154,9 +153,9 @@ Owner data is encrypted at rest. Raw IPs are never stored — SHA-256 hash used 
 |---|---|---|---|
 | /api/briefer/files | GET | None | Return repo list |
 | /api/briefer/files | POST | None | Walk repo directory |
-| /api/briefer/read | POST | None | Read file contents — LOCAL only |
-| /api/briefer/smart-select | POST | None | File selection via LLM — rate limited (20/min/IP) |
-| /api/briefer/apply | POST | None | Apply From/To change — LOCAL only, extension allowlist |
+| /api/briefer/read | POST | None | Read file contents, LOCAL only |
+| /api/briefer/smart-select | POST | None | File selection via LLM, rate limited (20/min/IP) |
+| /api/briefer/apply | POST | None | Apply From/To change, LOCAL only, extension allowlist |
 | /api/briefer/sessions | POST | None | Save session |
 | /api/briefer/sessions | GET | Owner | Return sessions, decrypted |
 | /api/briefer/templates | GET | None | Return prompt templates |
@@ -185,7 +184,7 @@ Preserve existing code style and conventions.
 Do not add placeholder comments like // TODO or // implement this.
 If you need to tell me something, tell me through chat.
 Before doing anything, explain your plan first and ask for my permission and input.
-If you are in doubt, always ask me first — do not assume.
+If you are in doubt, always ask me first, do not assume.
 Do not make up non-existent problems for the sake of feedback. If the code is good enough, say so.
 Do not use m-dash.
 ```
@@ -206,17 +205,17 @@ Do not use m-dash.
 | Attribute | Detail |
 |---|---|
 | Purpose | Chat with LLM, sessions persisted for owner and IP-scoped for unauthenticated |
-| Unauthenticated | IP-scoped — `user_id = sha256(ip)`, demo warning shown |
+| Unauthenticated | IP-scoped, `user_id = sha256(ip)`, demo warning shown |
 | Owner | Persistent, encrypted, 10 session cap |
 | Message limit | 100 per session |
 | Image input | File picker + clipboard paste |
-| LLM routing | Owner: Gemini/Groq chain with auto key rotation. Unauthenticated: Ollama if available, else public Groq key |
+| LLM routing | Owner: Gemini/Groq chain with auto key rotation. Unauthenticated: Public Groq key |
 
 #### API Routes
 
 | Route | Method | Auth | Description |
 |---|---|---|---|
-| /api/chat | POST | None | Stream LLM response — rate limited (60/min/IP) |
+| /api/chat | POST | None | Stream LLM response, rate limited (60/min/IP) |
 | /api/chat/models | GET | None | Available models |
 | /api/chat/sessions | GET | None | Owner: last 10. Unauthenticated: sessions by hashed IP |
 | /api/chat/sessions | POST | None | Create session |
@@ -247,7 +246,6 @@ JSON Table Viewer, Arithmetic Puzzle Generator, Word Search Generator, AI Crossw
 
 - Node.js 20+
 - One [Neon](https://neon.tech) project
-- [Ollama](https://ollama.com) installed and running (optional)
 - Groq and/or Gemini API key(s)
 - A Google Cloud project with OAuth 2.0 credentials
 
@@ -294,16 +292,10 @@ OWNER_GEMINI_API_KEY_1=
 OWNER_GROQ_API_KEY_1=
 GROQ_API_KEY_PUBLIC=
 
-# Ollama (optional — comment out to use Groq/Gemini only)
-# OLLAMA_URL=http://localhost:11434
-# OLLAMA_CHAT_MODEL=qwen2.5-coder:7b
-# OLLAMA_SMART_SELECT_MODEL=qwen2.5:7b
-# OLLAMA_CTX=16384
-
 # Local mode (enables repo dropdown and Apply Changes in Code Briefer)
 NEXT_PUBLIC_LOCAL=true
 
-# LLM config (optional — these are the defaults)
+# LLM config (optional, these are the defaults)
 # GROQ_PUBLIC_MODEL=llama-3.3-70b-versatile
 # LLM_TOKEN_LIMIT=11000
 # NEXT_PUBLIC_LLM_CHAIN_THRESHOLD=3000
@@ -350,7 +342,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Chatbot | Complete |
 | Security hardening | Complete |
 | Gemini + multi-key LLM chain | Complete |
-| Code Briefer (hosted mode — file upload) | Planned |
+| Code Briefer (hosted mode, file upload) | Planned |
 | JSON Table Viewer | Planned |
 | Arithmetic Puzzle Generator | Planned |
 | Word Search Generator | Planned |
@@ -360,4 +352,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-*— End of Document —*
+*— End of Document,*

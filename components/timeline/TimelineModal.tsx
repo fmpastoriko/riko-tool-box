@@ -118,7 +118,7 @@ export default function TimelineModal({
             <ScreenshotSlot
               key={suffix}
               src={`/timeline/${entry.id}-${suffix}`}
-              alt={`${entry.role} — ${entry.company}`}
+              alt={`${entry.role} - ${entry.company}`}
             />
           ))}
         </div>

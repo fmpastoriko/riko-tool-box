@@ -5,8 +5,6 @@ import { estimateTokens } from "@/lib/fileUtils";
 import FileTreeBase from "@/components/FileTreeBase";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
 
-export { DEFAULT_EXTS, EXT_GROUPS };
-
 type FileEntry = { path: string; size: number };
 
 interface RepoFileTreeProps {

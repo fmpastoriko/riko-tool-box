@@ -32,7 +32,7 @@ Given the file summaries below, select ONLY the files that must be directly edit
 Rules:
 - Return only files whose content would need to change.
 - Do NOT return infrastructure, routing, or utility files unless the task explicitly targets them.
-- Do NOT return files that are merely related by topic — only files that need edits.
+- Do NOT return files that are merely related by topic; only files that need edits.
 - For UI/style bugs, prefer component and CSS files over API routes.
 - Be minimal. Fewer is better.
 

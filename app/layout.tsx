@@ -7,7 +7,7 @@ import Providers from "@/components/Providers";
 export const metadata: Metadata = {
   title: "Riko's Toolbox",
   description:
-    "Riko's Toolbox — interactive tools built by Fransiskus Magnis Pastoriko.",
+    "Riko's Toolbox: Interactive tools built by Fransiskus Magnis Pastoriko.",
 };
 
 export default function RootLayout({

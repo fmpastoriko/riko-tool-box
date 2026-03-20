@@ -266,7 +266,7 @@ function TextCompareInner() {
             Text Compare
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-            Myers diff — side-by-side with inline character highlighting.{" "}
+            Myers diff; side-by-side with inline character highlighting.{" "}
             <a
               href="https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c"
               target="_blank"
