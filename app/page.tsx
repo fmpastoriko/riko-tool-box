@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Timeline from "@/components/Timeline";
 import Link from "next/link";
+import { TOOLS_CONFIG, MAX_HIGHLIGHTED, type ToolIcon } from "@/config/tools";
 
 const is_local = process.env.NEXT_PUBLIC_LOCAL === "true";
 
@@ -11,16 +12,15 @@ const BIO_TEXT =
   "Welcome! This site is meant as a showcase for my work and my capability, while also as my personal tool-box.\nMost of these tools were originally built for my own use, so things might feel a bit jumbled lol.\nStill, I hope they give a good sense of what I can do as a Software Engineer, Data Engineer, and/or Data Analyst.";
 
 const WARNING_TEXT =
-  "WARNING!!! For demo/portfolio purpose only. Don’t enter sensitive data. For real use, run it locally (clone the repo). Reach out if you need help.";
+  "WARNING!!! For demo/portfolio purpose only. Don't enter sensitive data. For real use, run it locally (clone the repo). Reach out if you need help.";
 
-type IconType =
-  | "chatbot"
-  | "codebriefer"
-  | "textcompare"
-  | "comingsoon"
-  | "alltools";
-
-function ToolIcon({ type, size = 22 }: { type: IconType; size?: number }) {
+function ToolIcon({
+  type,
+  size = 22,
+}: {
+  type: ToolIcon | "alltools" | "comingsoon";
+  size?: number;
+}) {
   if (type === "chatbot")
     return (
       <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
@@ -116,6 +116,33 @@ function ToolIcon({ type, size = 22 }: { type: IconType; size?: number }) {
         />
       </svg>
     );
+  if (type === "zipapply")
+    return (
+      <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
+        <rect
+          x="2"
+          y="2"
+          width="22"
+          height="22"
+          rx="4"
+          fill="currentColor"
+          opacity="0.9"
+        />
+        <path
+          d="M13 7v8M13 15l-3-3M13 15l3-3"
+          stroke="white"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M7 18h12"
+          stroke="white"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
   if (type === "alltools")
     return (
       <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
@@ -175,70 +202,63 @@ function ToolIcon({ type, size = 22 }: { type: IconType; size?: number }) {
   );
 }
 
-const TOOL_SLOTS: {
-  href: string | null;
-  label: string;
-  icon: IconType;
-  active: boolean;
-}[] = [
-  { href: "/tools/chatbot", label: "Chatbot", icon: "chatbot", active: true },
-  {
-    href: "/tools/code-briefer",
-    label: "Code Briefer",
-    icon: "codebriefer",
-    active: true,
-  },
-  {
-    href: "/tools/text-compare",
-    label: "Text Compare",
-    icon: "textcompare",
-    active: true,
-  },
-  { href: null, label: "Coming Soon", icon: "comingsoon", active: false },
-  { href: null, label: "Coming Soon", icon: "comingsoon", active: false },
-  { href: null, label: "Coming Soon", icon: "comingsoon", active: false },
-];
+const highlightedTools = TOOLS_CONFIG.filter(
+  (t) => t.highlight && (!t.localOnly || is_local),
+).slice(0, MAX_HIGHLIGHTED);
+
+const fillerCount = Math.max(0, 3 - highlightedTools.length);
 
 function ToolGrid() {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="grid grid-cols-2 gap-1.5">
-        {TOOL_SLOTS.map((t, i) => {
-          const inner = (
+        {highlightedTools.map((t) => (
+          <Link
+            key={t.href}
+            href={t.href}
+            className="block rounded-xl transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--accent)]"
+          >
             <div
               className="flex flex-col items-center justify-center gap-1.5 rounded-xl border transition-all duration-150"
               style={{
                 height: 72,
-                background: t.active ? "var(--surface)" : "var(--bg)",
+                background: "var(--surface)",
                 borderColor: "var(--border)",
-                color: t.active ? "var(--accent)" : "var(--muted)",
-                opacity: t.active ? 1 : 0.4,
+                color: "var(--accent)",
               }}
             >
               <ToolIcon type={t.icon} size={22} />
               <span
                 className="font-mono text-center leading-tight px-1"
-                style={{
-                  color: t.active ? "var(--secondary)" : "var(--muted)",
-                  fontSize: 10,
-                }}
+                style={{ color: "var(--secondary)", fontSize: 10 }}
               >
                 {t.label}
               </span>
             </div>
-          );
-          return t.href ? (
-            <Link
-              key={i}
-              href={t.href}
-              className="block rounded-xl transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--accent)]"
+          </Link>
+        ))}
+        {Array.from({ length: fillerCount }).map((_, i) => (
+          <div key={`filler-${i}`}>
+            <div
+              className="flex flex-col items-center justify-center gap-1.5 rounded-xl border transition-all duration-150"
+              style={{
+                height: 72,
+                background: "var(--bg)",
+                borderColor: "var(--border)",
+                color: "var(--muted)",
+                opacity: 0.4,
+              }}
             >
-              {inner}
-            </Link>
-          ) : (
-            <div key={i}>{inner}</div>
-          );
-        })}
+              <ToolIcon type="comingsoon" size={22} />
+              <span
+                className="font-mono text-center leading-tight px-1"
+                style={{ color: "var(--muted)", fontSize: 10 }}
+              >
+                Coming Soon
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
       <Link
         href="/tools"
@@ -259,14 +279,12 @@ function ToolGrid() {
   );
 }
 
-const ACTIVE_TOOL_SLOTS = TOOL_SLOTS.filter((t) => t.active);
-
 function ToolGridMobile() {
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-3 gap-2">
-        {ACTIVE_TOOL_SLOTS.map((t, i) => {
-          const inner = (
+        {highlightedTools.map((t) => (
+          <Link key={t.href} href={t.href} style={{ display: "block" }}>
             <div
               className="flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 transition-all duration-150"
               style={{
@@ -290,13 +308,8 @@ function ToolGridMobile() {
                 {t.label}
               </span>
             </div>
-          );
-          return (
-            <Link key={i} href={t.href!} style={{ display: "block" }}>
-              {inner}
-            </Link>
-          );
-        })}
+          </Link>
+        ))}
       </div>
       <Link
         href="/tools"
