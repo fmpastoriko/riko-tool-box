@@ -5,7 +5,7 @@ import { encryptIfOwner, decrypt } from "@/lib/encrypt";
 import { sha256 } from "@/lib/auth";
 import { getIp } from "@/lib/ip";
 
-const MAX_OUTPUT_BYTES = 500 * 1024;
+const MAX_OUTPUT_BYTES = 5000 * 1024;
 
 function safeDecrypt(value: string | null | undefined): string | null {
   if (!value) return null;

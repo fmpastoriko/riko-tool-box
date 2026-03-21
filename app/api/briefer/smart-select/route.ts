@@ -4,7 +4,7 @@ import { getServerRole, isOwnerRole } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 const MAX_FILES = 300;
-const MAX_PROMPT_BYTES = 10 * 1024 * 1024;
+const MAX_PROMPT_BYTES = 100 * 1024 * 1024;
 
 type FileEntry = { path: string; content: string };
 

@@ -4,7 +4,7 @@ import { getServerRole, isOwnerRole } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 const MAX_MESSAGES = 50;
-const MAX_MESSAGE_CONTENT_BYTES = 64 * 1024;
+const MAX_MESSAGE_CONTENT_BYTES = 5000 * 1024;
 
 type ContentPart =
   | { type: "text"; text: string }

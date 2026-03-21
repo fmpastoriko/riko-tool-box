@@ -101,6 +101,7 @@ export default function LlmSuggestionPanel({
                 whiteSpace: "nowrap",
                 display: "inline-block",
               }}
+              title={modelUsed}
             >
               {modelUsed}
             </span>

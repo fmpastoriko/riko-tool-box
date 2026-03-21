@@ -104,7 +104,7 @@ export default function CodeBrieferPage() {
   const [llmSuggestion, setLlmSuggestion] = useState("");
   const [llmSkippedReason, setLlmSkippedReason] = useState("");
   const [llmEnabled, setLlmEnabled] = useState(true);
-  const [fullContext, setFullContext] = useState(false);
+  const [fullContext, setFullContext] = useState(true);
   const [llmStreaming, setLlmStreaming] = useState(false);
   const [llmCopied, setLlmCopied] = useState(false);
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
@@ -120,6 +120,8 @@ export default function CodeBrieferPage() {
   >([]);
 
   const draftRestoredRef = useRef(false);
+
+  const [fileSearchTerm, setFileSearchTerm] = useState("");
 
   const activeExts = useMemo(() => {
     const extras = customExts
@@ -138,6 +140,16 @@ export default function CodeBrieferPage() {
       }),
     [allFiles, activeExts],
   );
+
+  const displayedFiles = useMemo(() => {
+    if (!fileSearchTerm) {
+      return filteredFiles;
+    }
+    const lowerCaseSearch = fileSearchTerm.toLowerCase();
+    return filteredFiles.filter((f) =>
+      f.path.toLowerCase().includes(lowerCaseSearch),
+    );
+  }, [filteredFiles, fileSearchTerm]);
 
   useEffect(() => {
     fetch("/api/chat/models")
@@ -810,31 +822,27 @@ export default function CodeBrieferPage() {
                   No repos found.
                 </p>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
+                <select
+                  className="input-base text-xs font-mono py-1 px-2.5 w-full"
+                  value={selectedRepo?.path || ""}
+                  onChange={(e) => {
+                    const selectedPath = e.target.value;
+                    const repo = repos.find((r) => r.path === selectedPath);
+                    if (repo) {
+                      loadRepo(repo);
+                    }
+                  }}
+                  style={{ minHeight: 32 }}
+                >
+                  <option value="" disabled>
+                    Select a repository
+                  </option>
                   {repos.map((r) => (
-                    <button
-                      key={r.path}
-                      onClick={() => loadRepo(r)}
-                      className="text-xs font-mono px-2.5 py-1 rounded-lg border transition-all"
-                      style={{
-                        borderColor:
-                          selectedRepo?.path === r.path
-                            ? "var(--accent)"
-                            : "var(--border)",
-                        background:
-                          selectedRepo?.path === r.path
-                            ? "var(--accent-dim)"
-                            : "transparent",
-                        color:
-                          selectedRepo?.path === r.path
-                            ? "var(--accent)"
-                            : "var(--secondary)",
-                      }}
-                    >
+                    <option key={r.path} value={r.path}>
                       {r.label}
-                    </button>
+                    </option>
                   ))}
-                </div>
+                </select>
               )
             ) : (
               <div className="space-y-2">
@@ -946,14 +954,14 @@ export default function CodeBrieferPage() {
                     className="text-xs font-mono"
                     style={{ color: "var(--muted)" }}
                   >
-                    {selectedFiles.size}/{filteredFiles.length}
+                    {selectedFiles.size}/{displayedFiles.length}
                   </span>
                   <button
                     onClick={() => {
-                      selectedFiles.size === filteredFiles.length
+                      selectedFiles.size === displayedFiles.length
                         ? setSelectedFiles(new Set())
                         : setSelectedFiles(
-                            new Set(filteredFiles.map((f) => f.path)),
+                            new Set(displayedFiles.map((f) => f.path)),
                           );
                     }}
                     className="text-xs font-mono px-1.5 py-0.5 rounded border"
@@ -962,15 +970,22 @@ export default function CodeBrieferPage() {
                       color: "var(--secondary)",
                     }}
                   >
-                    {selectedFiles.size === filteredFiles.length
+                    {selectedFiles.size === displayedFiles.length
                       ? "none"
                       : "all"}
                   </button>
                 </div>
               </div>
+              <input
+                type="text"
+                placeholder="Search files..."
+                className="input-base text-xs mb-2"
+                value={fileSearchTerm}
+                onChange={(e) => setFileSearchTerm(e.target.value)}
+              />
               <div className="flex-1 overflow-y-auto min-h-0">
                 <FileTreeBase
-                  files={filteredFiles}
+                  files={displayedFiles}
                   selected={selectedFiles}
                   onToggle={toggleFile}
                   smartSelected={smartSelected}

@@ -5,6 +5,8 @@ DO NOT ADD ANY COMMENTS.
 
 THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH. Example: app/tools/Page.tsx become "app-tools-page"
 
+THIS APPLY TO THIS CHAT ROOM: Only start coding when I specifically say "Start Coding". This is strict, but case insensitive. Others like "Go", "Start", etc is not valid.
+
 Return only code, no explanation unless asked.
 
 Preserve existing code style and conventions.

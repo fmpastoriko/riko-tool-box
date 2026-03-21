@@ -179,6 +179,7 @@ Owner data is encrypted at rest. Raw IPs are never stored, SHA-256 hash used as 
 ```
 DO NOT ADD ANY COMMENTS.
 THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH.
+THIS APPLY TO THIS CHAT ROOM: Only start coding when I specifically say "Start Coding". This is strict, but case insensitive.
 Return only code, no explanation unless asked.
 Preserve existing code style and conventions.
 Do not add placeholder comments like // TODO or // implement this.
