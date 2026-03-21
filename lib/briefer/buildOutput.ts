@@ -3,9 +3,15 @@ import { summarizeFile } from "@/lib/summarize";
 export const FOOTER_APPEND = `
 DO NOT ADD ANY COMMENTS.
 
-THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH. Example: app/tools/Page.tsx become "app-tools-page"
+THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH. Example: app/tools/Page.tsx become "app!@#tools!@#page"
 
-THIS APPLY TO THIS CHAT ROOM: Only start coding when I specifically say "Start Coding". This is strict, but case insensitive. Others like "Go", "Start", etc is not valid.
+THIS IS A MUST: EVERY FILE MUST BE NAMED USING ITS FULL PATH. NO BEING LAZY
+
+THIS IS A MUST: DON'T START CODING UNLESS I SAY "Start Coding"
+
+THIS IS A MUST: Before doing anything, explain your plan first and ask for my permission and input.
+
+THIS IS A MUST: I repeat it again because it's IMPORTANT. Only start coding when I specifically reply with "Start Coding". This is strict, but case insensitive. Others like "Go", "Start", etc is not valid.
 
 Return only code, no explanation unless asked.
 
@@ -13,9 +19,7 @@ Preserve existing code style and conventions.
 
 Do not add placeholder comments like // TODO or // implement this.
 
-If you need to tell me something, tell me through chat.
-
-Before doing anything, explain your plan first and ask for my permission and input.
+If you need to tell me something, tell me through chat, not through comment.
 
 If you are in doubt, always ask me first, do not assume.
 

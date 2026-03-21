@@ -48,8 +48,10 @@ function ChatbotInner() {
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [noModelsAvailable, setNoModelsAvailable] = useState(false);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -61,8 +63,21 @@ function ChatbotInner() {
     models.length > 0 && models.every((m) => m.exhausted);
 
   useEffect(() => {
+    if (userScrolledUp) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, userScrolledUp]);
+
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    function onScroll() {
+      if (!el) return;
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setUserScrolledUp(distFromBottom > 80);
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!hasUnsavedMessages) return;
@@ -140,6 +155,7 @@ function ChatbotInner() {
       }
     }
     setMessages(msgs);
+    setUserScrolledUp(false);
     setLimitReached(rawMsgs.length >= 100);
     if (data.session) {
       setActiveSession(data.session);
@@ -160,8 +176,7 @@ function ChatbotInner() {
         await loadSessions();
         return;
       }
-      const list = await loadSessions();
-      if (list.length > 0) await loadSession(list[0].id);
+      await loadSessions();
     }
     init();
   }, [authStatus, loadSession, loadSessions, searchParams]);
@@ -253,6 +268,7 @@ function ChatbotInner() {
     setInput("");
     setStreaming(true);
     setNoModelsAvailable(false);
+    setUserScrolledUp(false);
 
     const userContent: ContentPart[] | string = pendingImage
       ? [
@@ -377,9 +393,10 @@ function ChatbotInner() {
     setInjectedFiles(new Set());
     setPendingImage(null);
     setNoModelsAvailable(false);
+    setUserScrolledUp(false);
+    setSelectedModel("");
     if (isOwner) router.replace("/tools/chatbot");
     setMobileDrawerOpen(false);
-    setSelectedModel("");
   }
 
   async function handleSelectSession(s: ChatSession) {
@@ -395,20 +412,21 @@ function ChatbotInner() {
     const updated = sessions.filter((s) => s.id !== id);
     setSessions(updated);
     if (activeSession?.id === id) {
-      if (updated.length > 0) {
-        await loadSession(updated[0].id);
-        router.replace(`/tools/chatbot?session=${updated[0].id}`);
-      } else {
-        setActiveSession(null);
-        setMessages([]);
-        setRepoPath(null);
-        setContextInfo(null);
-        router.replace("/tools/chatbot");
-      }
+      setActiveSession(null);
+      setMessages([]);
+      setRepoPath(null);
+      setContextInfo(null);
+      router.replace("/tools/chatbot");
     }
   }
 
   const isFromCodeBriefer = !!activeSession?.repo_path;
+  const repoLabel =
+    repos.find((r) => r.path === (activeSession?.repo_path ?? repoPath))
+      ?.label ??
+    (activeSession?.repo_path ?? repoPath)?.split("/").pop() ??
+    null;
+  const modelLabel = activeSession?.model ?? (selectedModel || null);
 
   return (
     <>
@@ -453,7 +471,19 @@ function ChatbotInner() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {models.length > 0 && !sessionStarted && (
+            {allModelsExhausted && (
+              <span
+                className="text-xs font-mono px-2 py-1 rounded"
+                style={{
+                  background: "rgba(239,68,68,0.1)",
+                  color: "rgb(239,68,68)",
+                }}
+              >
+                No models available
+              </span>
+            )}
+
+            {!sessionStarted && models.length > 0 && (
               <select
                 className="input-base text-xs py-1.5"
                 style={{ width: 220 }}
@@ -469,55 +499,54 @@ function ChatbotInner() {
                 ))}
               </select>
             )}
-            {sessionStarted && activeSession?.model && (
-              <span
-                className="text-xs font-mono px-2 py-1 rounded"
-                style={{
-                  background: "var(--border)",
-                  color: "var(--secondary)",
-                }}
-              >
-                {activeSession.model}
-              </span>
+
+            {sessionStarted && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {repoLabel && (
+                  <span
+                    className="text-xs font-mono px-2 py-1 rounded"
+                    style={{
+                      background: "var(--accent-dim)",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {repoLabel}
+                  </span>
+                )}
+                {modelLabel && (
+                  <span
+                    className="text-xs font-mono px-2 py-1 rounded"
+                    style={{
+                      background: "var(--border)",
+                      color: "var(--secondary)",
+                    }}
+                  >
+                    {modelLabel}
+                  </span>
+                )}
+              </div>
             )}
-            {allModelsExhausted && (
-              <span
-                className="text-xs font-mono px-2 py-1 rounded"
-                style={{
-                  background: "rgba(239,68,68,0.1)",
-                  color: "rgb(239,68,68)",
-                }}
-              >
-                No models available
-              </span>
-            )}
-            {isLocal && repos.length > 0 && isOwner && !isFromCodeBriefer && (
-              <select
-                className="input-base text-xs py-1.5"
-                style={{ width: 160 }}
-                value={repoPath ?? ""}
-                onChange={(e) => setRepoPath(e.target.value || null)}
-              >
-                <option value="">No repo</option>
-                {repos.map((r) => (
-                  <option key={r.path} value={r.path}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            )}
-            {isFromCodeBriefer && (
-              <span
-                className="text-xs font-mono px-2 py-1 rounded"
-                style={{
-                  background: "var(--accent-dim)",
-                  color: "var(--accent)",
-                }}
-              >
-                {repos.find((r) => r.path === activeSession.repo_path)?.label ??
-                  activeSession.repo_path!.split("/").pop()}
-              </span>
-            )}
+
+            {!sessionStarted &&
+              isLocal &&
+              repos.length > 0 &&
+              isOwner &&
+              !isFromCodeBriefer && (
+                <select
+                  className="input-base text-xs py-1.5"
+                  style={{ width: 160 }}
+                  value={repoPath ?? ""}
+                  onChange={(e) => setRepoPath(e.target.value || null)}
+                >
+                  <option value="">No repo</option>
+                  {repos.map((r) => (
+                    <option key={r.path} value={r.path}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+
             {isLocal && repoPath && isOwner && (
               <button
                 onClick={() => setShowFileTree(true)}
@@ -597,6 +626,7 @@ function ChatbotInner() {
 
           <div className="flex-1 flex flex-col min-w-0 min-h-0">
             <div
+              ref={messagesContainerRef}
               className="flex-1 overflow-y-auto rounded-xl border mb-3 p-4 space-y-4"
               style={{
                 borderColor: "var(--border)",

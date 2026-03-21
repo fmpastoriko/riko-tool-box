@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import RepoFileTree from "@/components/RepoFileTree";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
 import FileTreeBase from "@/components/FileTreeBase";
+import RepoSelector from "@/components/briefer/RepoSelector";
 import LlmSuggestionPanel from "@/components/briefer/LlmSuggestionPanel";
 import OutputPanel from "@/components/briefer/OutputPanel";
 import { summarizeFile } from "@/lib/summarize";
@@ -116,7 +117,7 @@ export default function CodeBrieferPage() {
   const [modelUsed, setModelUsed] = useState<string>("");
   const [applying, setApplying] = useState(false);
   const [applyResults, setApplyResults] = useState<
-    { file: string; ok: boolean; error?: string }[]
+    { file: string; ok: boolean; prettified?: boolean; error?: string }[]
   >([]);
 
   const draftRestoredRef = useRef(false);
@@ -142,13 +143,9 @@ export default function CodeBrieferPage() {
   );
 
   const displayedFiles = useMemo(() => {
-    if (!fileSearchTerm) {
-      return filteredFiles;
-    }
-    const lowerCaseSearch = fileSearchTerm.toLowerCase();
-    return filteredFiles.filter((f) =>
-      f.path.toLowerCase().includes(lowerCaseSearch),
-    );
+    if (!fileSearchTerm) return filteredFiles;
+    const lower = fileSearchTerm.toLowerCase();
+    return filteredFiles.filter((f) => f.path.toLowerCase().includes(lower));
   }, [filteredFiles, fileSearchTerm]);
 
   useEffect(() => {
@@ -455,8 +452,7 @@ export default function CodeBrieferPage() {
 
     const analytical = isAnalyticalPrompt(promptBody);
     const stripped = contextOutput
-      .replace(/^THIS IS A MUST:.*\n?/m, "")
-      .replace(/^Before doing anything.*\n?/m, "");
+      .replace(/^THIS IS A MUST:.*\n?/mg, "")
     const llmInput = analytical
       ? stripped.slice(stripped.indexOf("PROMPT:"))
       : stripped;
@@ -715,7 +711,12 @@ export default function CodeBrieferPage() {
     if (blocks.length === 0) return;
     setApplying(true);
     setApplyResults([]);
-    const results: { file: string; ok: boolean; error?: string }[] = [];
+    const results: {
+      file: string;
+      ok: boolean;
+      prettified?: boolean;
+      error?: string;
+    }[] = [];
     for (const block of blocks) {
       try {
         const res = await fetch("/api/briefer/apply", {
@@ -732,6 +733,7 @@ export default function CodeBrieferPage() {
         results.push({
           file: block.filePath,
           ok: !!data.ok,
+          prettified: data.prettified,
           error: data.error,
         });
       } catch (e) {
@@ -814,36 +816,27 @@ export default function CodeBrieferPage() {
           <div className="card space-y-2 flex-shrink-0">
             <p className="section-label mb-0">Repository</p>
             {isLocal ? (
-              repos.length === 0 ? (
-                <p
-                  className="text-xs font-mono"
-                  style={{ color: "var(--muted)" }}
-                >
-                  No repos found.
-                </p>
-              ) : (
-                <select
-                  className="input-base text-xs font-mono py-1 px-2.5 w-full"
-                  value={selectedRepo?.path || ""}
-                  onChange={(e) => {
-                    const selectedPath = e.target.value;
-                    const repo = repos.find((r) => r.path === selectedPath);
-                    if (repo) {
-                      loadRepo(repo);
-                    }
-                  }}
-                  style={{ minHeight: 32 }}
-                >
-                  <option value="" disabled>
-                    Select a repository
-                  </option>
-                  {repos.map((r) => (
-                    <option key={r.path} value={r.path}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              )
+              <>
+                <RepoSelector
+                  repos={repos}
+                  selectedPath={selectedRepo?.path ?? null}
+                  onChange={loadRepo}
+                  disabled={loadingFiles}
+                />
+                {repoError && (
+                  <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
+                    {repoError}
+                  </p>
+                )}
+                {loadingFiles && (
+                  <p
+                    className="text-xs font-mono"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Scanning…
+                  </p>
+                )}
+              </>
             ) : (
               <div className="space-y-2">
                 <input
@@ -888,19 +881,6 @@ export default function CodeBrieferPage() {
                   </div>
                 )}
               </div>
-            )}
-            {repoError && (
-              <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
-                {repoError}
-              </p>
-            )}
-            {isLocal && loadingFiles && (
-              <p
-                className="text-xs font-mono"
-                style={{ color: "var(--muted)" }}
-              >
-                Scanning…
-              </p>
             )}
           </div>
 

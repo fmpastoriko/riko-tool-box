@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { estimateTokens } from "@/lib/fileUtils";
+import { summarizeFile } from "@/lib/summarize";
 import FileTreeBase from "@/components/FileTreeBase";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
 
@@ -97,7 +98,7 @@ export default function RepoFileTree({
     });
   }
 
-  async function handleInject() {
+  async function handleInject(summarize = false) {
     if (selectedFiles.size === 0) return;
     setInjecting(true);
     try {
@@ -110,9 +111,12 @@ export default function RepoFileTree({
         }),
       });
       const data = await res.json();
-      const files: { path: string; content: string }[] = (
-        data.files ?? []
-      ).filter((f: { skipped?: boolean }) => !f.skipped);
+      const files: { path: string; content: string }[] = (data.files ?? [])
+        .filter((f: { skipped?: boolean }) => !f.skipped)
+        .map((f: { path: string; content: string }) => ({
+          path: f.path,
+          content: summarize ? summarizeFile(f.path, f.content) : f.content,
+        }));
       const tokenCount = estimateTokens(files.map((f) => f.content).join("\n"));
       onInject(files, tokenCount);
     } catch (e) {
@@ -163,7 +167,7 @@ export default function RepoFileTree({
             className="text-xs font-mono px-3 py-1 rounded-lg"
             style={{ background: "var(--border)", color: "var(--secondary)" }}
           >
-            ✕ close
+            &#10006; close
           </button>
         </div>
 
@@ -197,17 +201,17 @@ export default function RepoFileTree({
               <button
                 key={ext}
                 onClick={() => toggleExt(ext)}
-                className="text-xs font-mono px-1.5 py-0.5 rounded border transition-all"
+                className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
                 style={{
                   borderColor: enabledExts.has(ext)
                     ? "var(--accent)"
                     : "var(--border)",
                   background: enabledExts.has(ext)
                     ? "var(--accent-dim)"
-                    : "transparent",
+                    : "var(--surface-dim)",
                   color: enabledExts.has(ext)
                     ? "var(--accent)"
-                    : "var(--muted)",
+                    : "var(--secondary)",
                 }}
               >
                 {ext}
@@ -264,14 +268,24 @@ export default function RepoFileTree({
             {selectedFiles.size > 0 &&
               `~${(tokenEstimate / 1000).toFixed(1)}k tokens est.`}
           </span>
-          <button
-            onClick={handleInject}
-            disabled={selectedFiles.size === 0 || injecting}
-            className="btn-primary text-sm"
-            style={{ opacity: selectedFiles.size === 0 ? 0.5 : 1 }}
-          >
-            {injecting ? "Loading…" : injectLabel}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleInject(true)}
+              disabled={selectedFiles.size === 0 || injecting}
+              className="btn-ghost text-xs py-1.5 px-3"
+              style={{ opacity: selectedFiles.size === 0 ? 0.5 : 1 }}
+            >
+              {injecting ? "Loading…" : "Inject Summarized"}
+            </button>
+            <button
+              onClick={() => handleInject(false)}
+              disabled={selectedFiles.size === 0 || injecting}
+              className="btn-primary text-sm"
+              style={{ opacity: selectedFiles.size === 0 ? 0.5 : 1 }}
+            >
+              {injecting ? "Loading…" : injectLabel}
+            </button>
+          </div>
         </div>
       </div>
     </div>

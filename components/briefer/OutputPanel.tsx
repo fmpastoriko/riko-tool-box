@@ -1,5 +1,7 @@
 "use client";
 
+import PanelBox from "@/components/PanelBox";
+
 interface OutputPanelProps {
   output: string;
   tokenCount: number;
@@ -31,46 +33,39 @@ export default function OutputPanel({
   onCollapseAll,
   onChange,
 }: OutputPanelProps) {
-  return (
-    <div className="flex-1 flex flex-col min-h-0 card gap-2">
-      <div className="flex items-center justify-between flex-shrink-0 flex-wrap gap-1">
-        <p className="section-label mb-0">Output</p>
-        <div className="flex items-center gap-1.5">
-          {output && (
-            <span
-              className="text-xs font-mono"
-              style={{ color: "var(--muted)" }}
-            >
-              ~{tokenCount.toLocaleString()} tokens
-            </span>
-          )}
-          {output && (
-            <button
-              onClick={onCopy}
-              className="btn-ghost text-xs py-0.5 px-1.5"
-            >
-              {copied ? "✓ Copied" : "Copy"}
-            </button>
-          )}
-          {output && (
-            <button
-              onClick={onDownload}
-              className="btn-ghost text-xs py-0.5 px-1.5"
-            >
-              ↓
-            </button>
-          )}
-          {joinedFiles.length > 0 && (
-            <button
-              onClick={allExpanded ? onCollapseAll : onExpandAll}
-              className="btn-ghost text-xs py-0.5 px-1.5"
-            >
-              {allExpanded ? "Collapse all" : "Expand all"}
-            </button>
-          )}
-        </div>
-      </div>
+  const headerRight = (
+    <>
+      {output && (
+        <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+          ~{tokenCount.toLocaleString()} tokens
+        </span>
+      )}
+      {output && (
+        <button onClick={onCopy} className="btn-ghost text-xs py-0.5 px-1.5">
+          {copied ? "✓ Copied" : "Copy"}
+        </button>
+      )}
+      {output && (
+        <button
+          onClick={onDownload}
+          className="btn-ghost text-xs py-0.5 px-1.5"
+        >
+          ↓
+        </button>
+      )}
+      {joinedFiles.length > 0 && (
+        <button
+          onClick={allExpanded ? onCollapseAll : onExpandAll}
+          className="btn-ghost text-xs py-0.5 px-1.5"
+        >
+          {allExpanded ? "Collapse all" : "Expand all"}
+        </button>
+      )}
+    </>
+  );
 
+  return (
+    <PanelBox title="Output" headerRight={headerRight}>
       {joinedFiles.length > 0 && (
         <>
           <div
@@ -118,6 +113,6 @@ export default function OutputPanel({
         placeholder="Output will appear here after Join…"
         style={{ background: "transparent", color: "var(--secondary)" }}
       />
-    </div>
+    </PanelBox>
   );
 }

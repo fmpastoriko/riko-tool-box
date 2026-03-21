@@ -3,12 +3,9 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { TOOLS_CONFIG } from "@/config/tools";
 
-const TOOLS = [
-  { href: "/tools/chatbot", label: "Chatbot" },
-  { href: "/tools/code-briefer", label: "Code Briefer" },
-  { href: "/tools/text-compare", label: "Text Compare" },
-];
+const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
 const SIDEBAR_WIDTH = 180;
 const TAB_WIDTH = 18;
@@ -21,12 +18,12 @@ export default function ToolsLayout({
   const pathname = usePathname();
   const [open, setOpen] = useState(true);
 
+  const tools = TOOLS_CONFIG.filter((t) => !t.localOnly || isLocal);
+
+  const toolPaths = tools.map((t) => t.href);
   const isHistory =
     pathname.includes("/history") ||
-    (!pathname.endsWith("/chatbot") &&
-      !pathname.endsWith("/code-briefer") &&
-      !pathname.endsWith("/text-compare") &&
-      pathname !== "/tools");
+    (!toolPaths.some((h) => pathname === h) && pathname !== "/tools");
 
   return (
     <>
@@ -51,7 +48,7 @@ export default function ToolsLayout({
           >
             Tools
           </p>
-          {TOOLS.map((t) => {
+          {tools.map((t) => {
             const active = pathname.startsWith(t.href);
             return (
               <Link

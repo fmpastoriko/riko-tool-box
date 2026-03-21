@@ -12,7 +12,7 @@ export default function ApplyButton({
 }) {
   const blocks = parseSuggestion(content);
   const [results, setResults] = useState<
-    { file: string; ok: boolean; error?: string }[]
+    { file: string; ok: boolean; prettified?: boolean; error?: string }[]
   >([]);
   const [applying, setApplying] = useState(false);
 
@@ -24,7 +24,12 @@ export default function ApplyButton({
         onClick={async () => {
           setApplying(true);
           setResults([]);
-          const res: { file: string; ok: boolean; error?: string }[] = [];
+          const res: {
+            file: string;
+            ok: boolean;
+            prettified?: boolean;
+            error?: string;
+          }[] = [];
           for (const block of blocks) {
             try {
               const r = await fetch("/api/briefer/apply", {
@@ -38,7 +43,12 @@ export default function ApplyButton({
                 }),
               });
               const d = await r.json();
-              res.push({ file: block.filePath, ok: !!d.ok, error: d.error });
+              res.push({
+                file: block.filePath,
+                ok: !!d.ok,
+                prettified: d.prettified,
+                error: d.error,
+              });
             } catch (e) {
               res.push({ file: block.filePath, ok: false, error: String(e) });
             }
@@ -59,6 +69,9 @@ export default function ApplyButton({
             {r.ok ? "✓" : "✕"}
           </span>
           <span style={{ color: "var(--secondary)" }}>{r.file}</span>
+          {r.ok && r.prettified && (
+            <span style={{ color: "var(--muted)" }}>prettier ✓</span>
+          )}
           {r.error && (
             <span style={{ color: "rgb(239,68,68)" }}>{r.error}</span>
           )}

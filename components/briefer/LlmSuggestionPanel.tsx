@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import MarkdownContent from "@/components/MarkdownContent";
+import PanelBox from "@/components/PanelBox";
 import { markdownStyles } from "@/components/chatbot/MessageBubble";
 import type { ModelInfo } from "@/components/chatbot/types";
 
@@ -14,7 +15,12 @@ interface LlmSuggestionPanelProps {
   models: ModelInfo[];
   selectedModel: string;
   applying: boolean;
-  applyResults: { file: string; ok: boolean; error?: string }[];
+  applyResults: {
+    file: string;
+    ok: boolean;
+    prettified?: boolean;
+    error?: string;
+  }[];
   chatSessionId: string | null;
   canApply: boolean;
   llmRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -57,131 +63,120 @@ export default function LlmSuggestionPanel({
 
   const thinkingModel = modelUsed || selectedModel || "LLM";
 
-  return (
-    <div className="flex-1 flex flex-col min-h-0 card gap-2">
+  const headerRight = (
+    <>
       <style>{markdownStyles}</style>
-      <div className="flex items-center justify-between flex-shrink-0 gap-1">
-        <p className="section-label mb-0">LLM Suggestion</p>
-        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          {models.length > 0 && (
-            <select
-              className="input-base text-xs py-0.5 flex-shrink-0"
-              style={{ height: 24, padding: "0 6px", fontSize: 11, width: 120 }}
-              value={selectedModel}
-              onChange={(e) => onModelChange(e.target.value)}
-            >
-              <option value="">LLM Model: Auto</option>
-              {models.map((m) => (
-                <option key={m.name} value={m.name} disabled={m.exhausted}>
-                  {m.exhausted ? `${m.name} (exhausted)` : m.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {allModelsExhausted && (
-            <span
-              className="text-xs font-mono px-1.5 py-0.5 rounded"
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                color: "rgb(239,68,68)",
-              }}
-            >
-              No models available
-            </span>
-          )}
-          {modelUsed && !llmStreaming && (
-            <span
-              className="text-xs font-mono px-1.5 py-0.5 rounded"
-              style={{
-                background: "var(--accent-dim)",
-                color: "var(--accent)",
-                maxWidth: 100,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                display: "inline-block",
-              }}
-              title={modelUsed}
-            >
-              {modelUsed}
-            </span>
-          )}
-          {llmStreaming && (
-            <span
-              className="w-2 h-2 rounded-full animate-pulse"
-              style={{ background: "var(--accent)" }}
-            />
-          )}
-          {llmStreaming && (
+      {models.length > 0 && (
+        <select
+          className="input-base text-xs py-0.5 flex-shrink-0"
+          style={{ height: 24, padding: "0 6px", fontSize: 11, width: 120 }}
+          value={selectedModel}
+          onChange={(e) => onModelChange(e.target.value)}
+        >
+          <option value="">LLM Model: Auto</option>
+          {models.map((m) => (
+            <option key={m.name} value={m.name} disabled={m.exhausted}>
+              {m.exhausted ? `${m.name} (exhausted)` : m.name}
+            </option>
+          ))}
+        </select>
+      )}
+      {allModelsExhausted && (
+        <span
+          className="text-xs font-mono px-1.5 py-0.5 rounded"
+          style={{
+            background: "rgba(239,68,68,0.1)",
+            color: "rgb(239,68,68)",
+          }}
+        >
+          No models available
+        </span>
+      )}
+      {modelUsed && !llmStreaming && (
+        <span
+          className="text-xs font-mono px-1.5 py-0.5 rounded"
+          style={{
+            background: "var(--accent-dim)",
+            color: "var(--accent)",
+            maxWidth: 100,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            display: "inline-block",
+          }}
+        >
+          {modelUsed}
+        </span>
+      )}
+      {llmStreaming && (
+        <span
+          className="w-2 h-2 rounded-full animate-pulse"
+          style={{ background: "var(--accent)" }}
+        />
+      )}
+      {llmStreaming && (
+        <button
+          onClick={onStop}
+          className="btn-ghost text-xs py-0.5 px-1.5"
+          style={{ color: "rgb(239,68,68)", borderColor: "rgb(239,68,68)" }}
+        >
+          ✕ Stop
+        </button>
+      )}
+      {llmSuggestion && !llmStreaming && (
+        <>
+          <button
+            onClick={() => setIsEditing((v) => !v)}
+            className="btn-ghost text-xs py-0.5 px-1.5"
+            style={
+              isEditing
+                ? { color: "var(--accent)", borderColor: "var(--accent)" }
+                : {}
+            }
+          >
+            Edit
+          </button>
+          <button onClick={onRetry} className="btn-ghost text-xs py-0.5 px-1.5">
+            ↺
+          </button>
+          <button onClick={onCopy} className="btn-ghost text-xs py-0.5 px-1.5">
+            {llmCopied ? "✓" : "Copy"}
+          </button>
+          {chatSessionId && (
             <button
-              onClick={onStop}
-              className="btn-ghost text-xs py-0.5 px-1.5"
-              style={{ color: "rgb(239,68,68)", borderColor: "rgb(239,68,68)" }}
-            >
-              ✕ Stop
-            </button>
-          )}
-          {llmSuggestion && !llmStreaming && (
-            <>
-              <button
-                onClick={() => setIsEditing((v) => !v)}
-                className="btn-ghost text-xs py-0.5 px-1.5"
-                style={
-                  isEditing
-                    ? { color: "var(--accent)", borderColor: "var(--accent)" }
-                    : {}
-                }
-              >
-                Edit
-              </button>
-              <button
-                onClick={onRetry}
-                className="btn-ghost text-xs py-0.5 px-1.5"
-              >
-                ↺
-              </button>
-              <button
-                onClick={onCopy}
-                className="btn-ghost text-xs py-0.5 px-1.5"
-              >
-                {llmCopied ? "✓" : "Copy"}
-              </button>
-              {chatSessionId && (
-                <button
-                  onClick={() =>
-                    window.open(
-                      `/tools/chatbot?session=${chatSessionId}`,
-                      "_blank",
-                    )
-                  }
-                  className="btn-ghost text-xs py-0.5 px-1.5"
-                >
-                  Chat ↗
-                </button>
-              )}
-              {canApply && (
-                <button
-                  onClick={onApply}
-                  disabled={applying}
-                  className="btn-primary text-xs py-0.5 px-1.5"
-                  style={{ opacity: applying ? 0.6 : 1 }}
-                >
-                  {applying ? "Applying…" : "Apply"}
-                </button>
-              )}
-            </>
-          )}
-          {llmSkippedReason && !llmStreaming && !llmSuggestion && (
-            <button
-              onClick={onRunAnyway}
+              onClick={() =>
+                window.open(`/tools/chatbot?session=${chatSessionId}`, "_blank")
+              }
               className="btn-ghost text-xs py-0.5 px-1.5"
             >
-              Run anyway
+              Chat ↗
             </button>
           )}
-        </div>
-      </div>
+          {canApply && (
+            <button
+              onClick={onApply}
+              disabled={applying}
+              className="btn-primary text-xs py-0.5 px-1.5"
+              style={{ opacity: applying ? 0.6 : 1 }}
+            >
+              {applying ? "Applying…" : "Apply"}
+            </button>
+          )}
+        </>
+      )}
+      {llmSkippedReason && !llmStreaming && !llmSuggestion && (
+        <button
+          onClick={onRunAnyway}
+          className="btn-ghost text-xs py-0.5 px-1.5"
+        >
+          Run anyway
+        </button>
+      )}
+    </>
+  );
 
+  return (
+    <PanelBox title="LLM Suggestion" headerRight={headerRight}>
       {!showContent ? (
         <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
           {llmSkippedReason}
@@ -224,6 +219,9 @@ export default function LlmSuggestionPanel({
                 {r.ok ? "✓" : "✕"}
               </span>
               <span style={{ color: "var(--secondary)" }}>{r.file}</span>
+              {r.ok && r.prettified && (
+                <span style={{ color: "var(--muted)" }}>prettier ✓</span>
+              )}
               {r.error && (
                 <span style={{ color: "rgb(239,68,68)" }}>{r.error}</span>
               )}
@@ -231,6 +229,6 @@ export default function LlmSuggestionPanel({
           ))}
         </div>
       )}
-    </div>
+    </PanelBox>
   );
 }

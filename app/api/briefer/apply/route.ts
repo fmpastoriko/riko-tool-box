@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { isRepoAllowed, resolveFilePath } from "@/lib/repos";
 import { ALLOWED_WRITE_EXTS } from "@/config/fileExtensions";
+import { runPrettier } from "@/lib/prettierFile";
 
 const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
 
@@ -107,7 +108,10 @@ export async function POST(req: NextRequest) {
     }
 
     fs.writeFileSync(abs, updated, "utf-8");
-    return NextResponse.json({ ok: true });
+
+    const prettified = runPrettier(abs, repoPath);
+
+    return NextResponse.json({ ok: true, prettified });
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },
