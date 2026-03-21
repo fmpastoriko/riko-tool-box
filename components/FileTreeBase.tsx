@@ -183,18 +183,9 @@ export default function FileTreeBase({
                           )}
                         </span>
                       )}
-                      {onRenamePath && isEditing && (
-                        <button
-                          onClick={() => confirmEdit(f.path)}
-                          className="text-xs flex-shrink-0 px-1.5 py-0.5 rounded"
-                          style={{ background: "var(--accent)", color: "#fff" }}
-                        >
-                          ✓
-                        </button>
-                      )}
                     </button>
 
-                    {onRenamePath && isEditing && (
+                    {isEditing && (
                       <button
                         onClick={() => confirmEdit(f.path)}
                         className="text-xs flex-shrink-0 px-1.5 py-0.5 rounded"

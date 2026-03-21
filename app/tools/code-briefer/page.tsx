@@ -149,6 +149,10 @@ export default function CodeBrieferPage() {
     return filteredFiles.filter((f) => f.path.toLowerCase().includes(lower));
   }, [filteredFiles, fileSearchTerm]);
 
+  const allDisplayedSelected =
+    displayedFiles.length > 0 &&
+    displayedFiles.every((f) => selectedFiles.has(f.path));
+
   useEffect(() => {
     fetch("/api/chat/models")
       .then((r) => r.json())
@@ -971,11 +975,19 @@ export default function CodeBrieferPage() {
                   </span>
                   <button
                     onClick={() => {
-                      selectedFiles.size === displayedFiles.length
-                        ? setSelectedFiles(new Set())
-                        : setSelectedFiles(
-                            new Set(displayedFiles.map((f) => f.path)),
-                          );
+                      if (allDisplayedSelected) {
+                        setSelectedFiles((prev) => {
+                          const next = new Set(prev);
+                          for (const f of displayedFiles) next.delete(f.path);
+                          return next;
+                        });
+                      } else {
+                        setSelectedFiles((prev) => {
+                          const next = new Set(prev);
+                          for (const f of displayedFiles) next.add(f.path);
+                          return next;
+                        });
+                      }
                     }}
                     className="text-xs font-mono px-1.5 py-0.5 rounded border"
                     style={{
@@ -983,9 +995,7 @@ export default function CodeBrieferPage() {
                       color: "var(--secondary)",
                     }}
                   >
-                    {selectedFiles.size === displayedFiles.length
-                      ? "none"
-                      : "all"}
+                    {allDisplayedSelected ? "none" : "all"}
                   </button>
                 </div>
               </div>
