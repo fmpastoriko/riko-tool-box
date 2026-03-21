@@ -4,6 +4,9 @@ import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { diffLines, diffChars, type Change } from "diff";
 import Link from "next/link";
+import { TOOLS_CONFIG } from "@/config/tools";
+import ToolHeader from "@/components/ToolHeader";
+import PanelBox from "@/components/PanelBox";
 
 type Side = {
   text: string;
@@ -255,46 +258,50 @@ function TextCompareInner() {
     };
   }, [left, right]);
 
+  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/text-compare");
+
+  const diffHeaderRight = (
+    <>
+      {left && right && (
+        <div className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+          {savedId ? (
+            <span style={{ color: "rgb(34,197,94)" }}>✓ saved</span>
+          ) : (
+            <span>saving…</span>
+          )}
+        </div>
+      )}
+      {(["split", "unified"] as const).map((m) => (
+        <button
+          key={m}
+          onClick={() => setMode(m)}
+          className="text-xs px-3 py-1 rounded border capitalize transition-colors"
+          style={{
+            borderColor: mode === m ? "var(--accent)" : "var(--border)",
+            color: mode === m ? "var(--accent)" : "var(--secondary)",
+            background: mode === m ? "var(--accent-dim)" : "transparent",
+          }}
+        >
+          {m}
+        </button>
+      ))}
+    </>
+  );
+
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "var(--primary)" }}
-          >
-            Text Compare
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--secondary)" }}>
-            Myers diff; side-by-side with inline character highlighting.{" "}
-            <a
-              href="https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--accent)" }}
-              className="underline"
-            >
-              Read why ↗
-            </a>
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-xs font-mono" style={{ color: "var(--muted)" }}>
-            {left &&
-              right &&
-              (savedId ? (
-                <span style={{ color: "rgb(34,197,94)" }}>✓ saved</span>
-              ) : (
-                <span>saving…</span>
-              ))}
-          </div>
-          <Link
-            href="/tools/text-compare/history"
-            className="btn-ghost text-xs py-1 px-3"
-          >
-            History ↗
-          </Link>
-        </div>
+        <ToolHeader
+          title="Text Compare"
+          subtitle="Myers diff; side-by-side with inline character highlighting."
+          mediumUrl={toolConfig?.mediumUrl}
+        />
+        <Link
+          href="/tools/text-compare/history"
+          className="btn-ghost text-xs py-1 px-3"
+        >
+          History ↗
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-shrink-0">
@@ -331,125 +338,108 @@ function TextCompareInner() {
         ))}
       </div>
 
-      {changes.length > 0 && (
-        <div className="flex-1 flex flex-col min-h-0 gap-2">
-          <div className="flex justify-end flex-shrink-0">
-            <div className="flex gap-1.5">
-              {(["split", "unified"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className="text-xs px-3 py-1 rounded border capitalize transition-colors"
-                  style={{
-                    borderColor: mode === m ? "var(--accent)" : "var(--border)",
-                    color: mode === m ? "var(--accent)" : "var(--secondary)",
-                    background:
-                      mode === m ? "var(--accent-dim)" : "transparent",
-                  }}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div
-            className="flex-1 rounded-xl overflow-hidden flex flex-col min-h-0"
-            style={{
-              border: "1px solid var(--border)",
-              background: "var(--surface)",
-            }}
-          >
-            {mode === "split" ? (
-              <div className="flex-1 overflow-auto">
-                <div
-                  className="grid text-xs font-mono py-1.5 border-b sticky top-0"
-                  style={{
-                    gridTemplateColumns: "1fr 1fr",
-                    borderColor: "var(--border)",
-                    background: "var(--bg)",
-                  }}
-                >
-                  <span className="pl-11" style={{ color: "var(--muted)" }}>
-                    First Text
-                  </span>
-                  <span
-                    className="pl-11 border-l"
+      <div className="flex-1 flex flex-col min-h-0">
+        <PanelBox
+          title="Diff"
+          headerRight={changes.length > 0 ? diffHeaderRight : undefined}
+        >
+          {changes.length > 0 ? (
+            <div
+              className="flex-1 rounded-xl overflow-hidden flex flex-col min-h-0"
+              style={{ border: "1px solid var(--border)" }}
+            >
+              {mode === "split" ? (
+                <div className="flex-1 overflow-auto">
+                  <div
+                    className="grid text-xs font-mono py-1.5 border-b sticky top-0"
                     style={{
-                      color: "var(--muted)",
+                      gridTemplateColumns: "1fr 1fr",
                       borderColor: "var(--border)",
+                      background: "var(--bg)",
                     }}
                   >
-                    Second Text
-                  </span>
-                </div>
-                {pairs.map((pair, i) => (
-                  <DiffRow
-                    key={i}
-                    leftSide={pair.left}
-                    rightSide={pair.right}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 overflow-auto">
-                {changes.map((change, ci) => {
-                  const lines = change.value.replace(/\n$/, "").split("\n");
-                  const isAdded = !!change.added,
-                    isRemoved = !!change.removed;
-                  const bg = isAdded
-                    ? "rgba(34,197,94,0.08)"
-                    : isRemoved
-                      ? "rgba(239,68,68,0.08)"
-                      : "transparent";
-                  const color = isAdded
-                    ? "rgba(34,197,94,0.9)"
-                    : isRemoved
-                      ? "rgba(239,68,68,0.9)"
-                      : "var(--secondary)";
-                  const prefix = isAdded ? "+" : isRemoved ? "−" : " ";
-                  return lines.map((text, li) => (
-                    <div
-                      key={`${ci}-${li}`}
-                      className="flex items-baseline py-0.5 font-mono text-xs border-b"
-                      style={{ background: bg, borderColor: "var(--border)" }}
+                    <span className="pl-11" style={{ color: "var(--muted)" }}>
+                      First Text
+                    </span>
+                    <span
+                      className="pl-11 border-l"
+                      style={{
+                        color: "var(--muted)",
+                        borderColor: "var(--border)",
+                      }}
                     >
-                      <span
-                        className="select-none text-right w-9 flex-shrink-0 pr-2"
-                        style={{ color: "var(--muted)" }}
-                      />
-                      <span
-                        className="w-4 flex-shrink-0 select-none"
+                      Second Text
+                    </span>
+                  </div>
+                  {pairs.map((pair, i) => (
+                    <DiffRow
+                      key={i}
+                      leftSide={pair.left}
+                      rightSide={pair.right}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto">
+                  {changes.map((change, ci) => {
+                    const lines = change.value.replace(/\n$/, "").split("\n");
+                    const isAdded = !!change.added,
+                      isRemoved = !!change.removed;
+                    const bg = isAdded
+                      ? "rgba(34,197,94,0.08)"
+                      : isRemoved
+                        ? "rgba(239,68,68,0.08)"
+                        : "transparent";
+                    const color = isAdded
+                      ? "rgba(34,197,94,0.9)"
+                      : isRemoved
+                        ? "rgba(239,68,68,0.9)"
+                        : "var(--secondary)";
+                    const prefix = isAdded ? "+" : isRemoved ? "−" : " ";
+                    return lines.map((text, li) => (
+                      <div
+                        key={`${ci}-${li}`}
+                        className="flex items-baseline py-0.5 font-mono text-xs border-b"
                         style={{
-                          color: isAdded
-                            ? "rgba(34,197,94,0.7)"
-                            : isRemoved
-                              ? "rgba(239,68,68,0.7)"
-                              : "transparent",
+                          background: bg,
+                          borderColor: "var(--border)",
                         }}
                       >
-                        {prefix}
-                      </span>
-                      <span className="whitespace-pre" style={{ color }}>
-                        {text || " "}
-                      </span>
-                    </div>
-                  ));
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!left && !right && (
-        <div
-          className="flex-1 rounded-xl flex items-center justify-center text-sm"
-          style={{ border: "1px dashed var(--border)", color: "var(--muted)" }}
-        >
-          Paste text in both panels to see the diff
-        </div>
-      )}
+                        <span
+                          className="select-none text-right w-9 flex-shrink-0 pr-2"
+                          style={{ color: "var(--muted)" }}
+                        />
+                        <span
+                          className="w-4 flex-shrink-0 select-none"
+                          style={{
+                            color: isAdded
+                              ? "rgba(34,197,94,0.7)"
+                              : isRemoved
+                                ? "rgba(239,68,68,0.7)"
+                                : "transparent",
+                          }}
+                        >
+                          {prefix}
+                        </span>
+                        <span className="whitespace-pre" style={{ color }}>
+                          {text || " "}
+                        </span>
+                      </div>
+                    ));
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className="flex-1 flex items-center justify-center text-sm"
+              style={{ color: "var(--muted)" }}
+            >
+              Paste text in both panels to see the diff
+            </div>
+          )}
+        </PanelBox>
+      </div>
     </div>
   );
 }

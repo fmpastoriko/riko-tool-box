@@ -15,6 +15,8 @@ import type {
   ModelInfo,
   ContentPart,
 } from "@/components/chatbot/types";
+import { TOOLS_CONFIG } from "@/config/tools";
+import ToolHeader from "@/components/ToolHeader";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
@@ -61,6 +63,8 @@ function ChatbotInner() {
   const sessionStarted = !!activeSession;
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
+
+  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/chatbot");
 
   useEffect(() => {
     if (userScrolledUp) return;
@@ -454,20 +458,11 @@ function ChatbotInner() {
                 />
               </svg>
             </button>
-            <div>
-              <h1
-                className="text-2xl font-bold"
-                style={{ color: "var(--primary)" }}
-              >
-                Chatbot
-              </h1>
-              <p
-                className="text-xs mt-0.5"
-                style={{ color: "var(--secondary)" }}
-              >
-                Chat with a local or hosted LLM.
-              </p>
-            </div>
+            <ToolHeader
+              title="Chatbot"
+              subtitle="Chat with a local or hosted LLM."
+              mediumUrl={toolConfig?.mediumUrl}
+            />
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">

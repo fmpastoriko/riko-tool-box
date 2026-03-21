@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { TOOLS_CONFIG } from "@/config/tools";
 
-const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
-
 const SIDEBAR_WIDTH = 180;
 const TAB_WIDTH = 18;
 
@@ -18,9 +16,7 @@ export default function ToolsLayout({
   const pathname = usePathname();
   const [open, setOpen] = useState(true);
 
-  const tools = TOOLS_CONFIG.filter((t) => !t.localOnly || isLocal);
-
-  const toolPaths = tools.map((t) => t.href);
+  const toolPaths = TOOLS_CONFIG.map((t) => t.href);
   const isHistory =
     pathname.includes("/history") ||
     (!toolPaths.some((h) => pathname === h) && pathname !== "/tools");
@@ -48,7 +44,7 @@ export default function ToolsLayout({
           >
             Tools
           </p>
-          {tools.map((t) => {
+          {TOOLS_CONFIG.map((t) => {
             const active = pathname.startsWith(t.href);
             return (
               <Link

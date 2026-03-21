@@ -6,8 +6,14 @@ import FileTreeBase from "@/components/FileTreeBase";
 import RepoSelector from "@/components/briefer/RepoSelector";
 import PanelBox from "@/components/PanelBox";
 import { ALLOWED_WRITE_EXTS } from "@/config/fileExtensions";
+import { TOOLS_CONFIG } from "@/config/tools";
+import ToolHeader from "@/components/ToolHeader";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
+
+const localOnlyReason =
+  TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier")?.localOnlyReason ??
+  "";
 
 type Repo = { label: string; path: string };
 type ZipEntry = { path: string; content: string; size: number };
@@ -25,11 +31,15 @@ export default function codeapplierPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<ApplyResult[]>([]);
   const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
   const [loadingZip, setLoadingZip] = useState(false);
   const [zipName, setZipName] = useState("");
+  const [pickedFilenames, setPickedFilenames] = useState<string[]>([]);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
+
+  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier");
 
   useEffect(() => {
     if (!isLocal) return;
@@ -49,7 +59,9 @@ export default function codeapplierPage() {
     setZipEntries([]);
     setSelected(new Set());
     setResults([]);
+    setApplied(false);
     setZipName(file.name);
+    setPickedFilenames([file.name]);
 
     try {
       const zip = await JSZip.loadAsync(file);
@@ -91,6 +103,11 @@ export default function codeapplierPage() {
     if (files.length === 0) return;
     setError("");
     setResults([]);
+    setZipName("");
+    setPickedFilenames(files.map((f) => f.name));
+    setZipEntries([]);
+    setSelected(new Set());
+    setApplied(false);
 
     const newEntries: ZipEntry[] = [];
 
@@ -183,6 +200,28 @@ export default function codeapplierPage() {
     }
 
     setResults(out);
+    setApplied(true);
+
+    const allPrettified =
+      out.length > 0 && out.every((r) => r.ok && r.prettified);
+    if (allPrettified && pickedFilenames.length > 0) {
+      try {
+        const res = await fetch("/api/applier/delete-zip", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filenames: pickedFilenames }),
+        });
+        const data = await res.json();
+      } catch (e) {
+        console.error("[delete-zip] fetch error:", e);
+      }
+      setZipEntries([]);
+      setSelected(new Set());
+      setZipName("");
+      setPickedFilenames([]);
+    } else {
+    }
+
     setApplying(false);
   }
 
@@ -197,18 +236,11 @@ export default function codeapplierPage() {
   if (!isLocal) {
     return (
       <div className="flex-1 flex flex-col gap-4">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "var(--primary)" }}
-          >
-            Code Applier
-          </h1>
-          <p className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>
-            Apply zip file contents directly to a local repo with
-            auto-formatting.
-          </p>
-        </div>
+        <ToolHeader
+          title="Code Applier"
+          subtitle="Apply zip file contents directly to a local repo with auto-formatting."
+          mediumUrl={toolConfig?.mediumUrl}
+        />
         <div
           className="card"
           style={{
@@ -217,9 +249,7 @@ export default function codeapplierPage() {
           }}
         >
           <p className="text-sm font-mono" style={{ color: "rgb(239,68,68)" }}>
-            Disabled for the Vercel version because it writes directly to your
-            local files. Clone the repo and run locally if you want this
-            functionality.
+            {localOnlyReason}
           </p>
         </div>
       </div>
@@ -229,18 +259,11 @@ export default function codeapplierPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "var(--primary)" }}
-          >
-            Code Applier
-          </h1>
-          <p className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>
-            Apply zip file contents directly to a local repo with
-            auto-formatting.
-          </p>
-        </div>
+        <ToolHeader
+          title="Code Applier"
+          subtitle="Apply zip file contents directly to a local repo with auto-formatting."
+          mediumUrl={toolConfig?.mediumUrl}
+        />
       </div>
 
       <div className="flex-1 flex gap-4 min-h-0">
@@ -338,9 +361,14 @@ export default function codeapplierPage() {
 
           <button
             onClick={handleApply}
-            disabled={!selectedRepo || selected.size === 0 || applying}
+            disabled={
+              !selectedRepo || selected.size === 0 || applying || applied
+            }
             className="btn-primary flex-shrink-0 justify-center"
-            style={{ opacity: !selectedRepo || selected.size === 0 ? 0.6 : 1 }}
+            style={{
+              opacity:
+                !selectedRepo || selected.size === 0 || applied ? 0.6 : 1,
+            }}
           >
             {applying
               ? "Applying…"

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import RepoFileTree from "@/components/RepoFileTree";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
 import FileTreeBase from "@/components/FileTreeBase";
 import RepoSelector from "@/components/briefer/RepoSelector";
@@ -11,7 +10,7 @@ import LlmSuggestionPanel from "@/components/briefer/LlmSuggestionPanel";
 import OutputPanel from "@/components/briefer/OutputPanel";
 import { summarizeFile } from "@/lib/summarize";
 import { parseSuggestion } from "@/lib/parseSuggestion";
-import { formatSize, estimateTokens } from "@/lib/fileUtils";
+import { estimateTokens } from "@/lib/fileUtils";
 import {
   buildOutput,
   FOOTER_APPEND,
@@ -34,6 +33,8 @@ import {
 } from "@/lib/briefer/llmPrompts";
 import { LLM_TOKEN_LIMIT } from "@/config/llm";
 import type { ModelInfo } from "@/components/chatbot/types";
+import { TOOLS_CONFIG } from "@/config/tools";
+import ToolHeader from "@/components/ToolHeader";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
@@ -807,6 +808,8 @@ export default function CodeBrieferPage() {
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
 
+  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-briefer");
+
   if (isMobile) {
     return (
       <div className="flex-1 flex items-center justify-center text-center px-6">
@@ -829,17 +832,11 @@ export default function CodeBrieferPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "var(--primary)" }}
-          >
-            Code Briefer
-          </h1>
-          <p className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>
-            Join code files, prepend a prompt, ship to any LLM.
-          </p>
-        </div>
+        <ToolHeader
+          title="Code Briefer"
+          subtitle="Join code files, prepend a prompt, ship to any LLM."
+          mediumUrl={toolConfig?.mediumUrl}
+        />
         <Link
           href="/tools/code-briefer/history"
           className="btn-ghost text-xs py-1 px-3"

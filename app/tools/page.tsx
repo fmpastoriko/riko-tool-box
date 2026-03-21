@@ -1,10 +1,6 @@
 import ToolCard from "@/components/ToolCard";
 import { TOOLS_CONFIG } from "@/config/tools";
 
-const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
-
-const tools = TOOLS_CONFIG.filter((t) => !t.localOnly || isLocal);
-
 export default function ToolsPage() {
   return (
     <div className="flex flex-col h-full">
@@ -26,7 +22,7 @@ export default function ToolsPage() {
       </div>
       <div className="flex-1 overflow-y-auto px-4 sm:px-0 pb-6">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          {tools.map((tool) => (
+          {TOOLS_CONFIG.map((tool) => (
             <ToolCard
               key={tool.href}
               href={tool.href}
