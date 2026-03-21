@@ -121,6 +121,7 @@ export default function CodeBrieferPage() {
   >([]);
 
   const draftRestoredRef = useRef(false);
+  const selectedRepoRef = useRef<{ label: string; path: string } | null>(null);
 
   const [fileSearchTerm, setFileSearchTerm] = useState("");
 
@@ -256,8 +257,38 @@ export default function CodeBrieferPage() {
     selectedFiles,
   ]);
 
+  useEffect(() => {
+    selectedRepoRef.current = selectedRepo;
+  }, [selectedRepo]);
+
+  useEffect(() => {
+    if (!isLocal || !selectedRepoRef.current) return;
+    const repo = selectedRepoRef.current;
+    setLoadingFiles(true);
+    setRepoError("");
+    fetch("/api/briefer/files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        repoPath: repo.path,
+        extensions: Array.from(activeExts),
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          setRepoError(data.error);
+          return;
+        }
+        setAllFiles(data.files ?? []);
+      })
+      .catch((e) => setRepoError(String(e)))
+      .finally(() => setLoadingFiles(false));
+  }, [activeExts]);
+
   async function loadRepo(repo: { label: string; path: string }) {
     setSelectedRepo(repo);
+    selectedRepoRef.current = repo;
     setAllFiles([]);
     setSelectedFiles(new Set());
     setSmartSelected(new Set());
@@ -275,7 +306,10 @@ export default function CodeBrieferPage() {
       const res = await fetch("/api/briefer/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoPath: repo.path }),
+        body: JSON.stringify({
+          repoPath: repo.path,
+          extensions: Array.from(activeExts),
+        }),
       });
       const data = await res.json();
       if (data.error) {
@@ -451,8 +485,7 @@ export default function CodeBrieferPage() {
     llmAbortRef.current = controller;
 
     const analytical = isAnalyticalPrompt(promptBody);
-    const stripped = contextOutput
-      .replace(/^THIS IS A MUST:.*\n?/mg, "")
+    const stripped = contextOutput.replace(/^THIS IS A MUST:.*\n?/gm, "");
     const llmInput = analytical
       ? stripped.slice(stripped.indexOf("PROMPT:"))
       : stripped;

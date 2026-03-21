@@ -2,7 +2,7 @@ export type ToolIcon =
   | "chatbot"
   | "codebriefer"
   | "textcompare"
-  | "zipapply"
+  | "codeapplier"
   | "comingsoon";
 
 export interface ToolConfig {
@@ -23,8 +23,8 @@ export const TOOLS_CONFIG: ToolConfig[] = [
     icon: "chatbot",
     highlight: true,
     description:
-      "Chat with a local LLM via Ollama. Sessions saved to DB, 100 message cap per session, 10 sessions max.",
-    demonstrates: ["Ollama", "Streaming", "Local LLM", "DB"],
+      "Chat with a local LLM via Groq/Gemini API. Sessions saved to DB, 100 message cap per session, 10 sessions max.",
+    demonstrates: ["Groq/Gemini", "Streaming", "Local LLM", "DB"],
     mediumUrl:
       "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-to-reduce-my-claude-usage-835c73bd7676",
   },
@@ -34,8 +34,8 @@ export const TOOLS_CONFIG: ToolConfig[] = [
     icon: "codebriefer",
     highlight: true,
     description:
-      "Join code files from a local repo, prepend a prompt, and output a single context-ready block for any LLM. Smart Select uses Ollama + Qwen to auto-pick relevant files.",
-    demonstrates: ["Ollama / Qwen", "File tree", "AI integration", "DB"],
+      "Join code files from a local repo, prepend a prompt, and output a single context-ready block for any LLM. Smart Select uses Groq to auto-pick relevant files.",
+    demonstrates: ["Groq", "File tree", "AI integration", "DB"],
     mediumUrl:
       "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-to-reduce-my-claude-usage-835c73bd7676",
   },
@@ -51,9 +51,9 @@ export const TOOLS_CONFIG: ToolConfig[] = [
       "https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c",
   },
   {
-    href: "/tools/zip-apply",
-    label: "Zip Apply",
-    icon: "zipapply",
+    href: "/tools/code-applier",
+    label: "Code Applier",
+    icon: "codeapplier",
     highlight: true,
     localOnly: true,
     description:

@@ -18,7 +18,7 @@ type ApplyResult = {
   error?: string;
 };
 
-export default function ZipApplyPage() {
+export default function codeapplierPage() {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
   const [zipEntries, setZipEntries] = useState<ZipEntry[]>([]);
@@ -29,6 +29,7 @@ export default function ZipApplyPage() {
   const [zipName, setZipName] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isLocal) return;
@@ -85,6 +86,49 @@ export default function ZipApplyPage() {
     }
   }
 
+  async function handleFilesPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setError("");
+    setResults([]);
+
+    const newEntries: ZipEntry[] = [];
+
+    await Promise.all(
+      files.map(async (file) => {
+        const filename = file.name;
+        const derivedPath = filename.includes("!@#")
+          ? filename.replace(/!@#/g, "/")
+          : filename;
+        if (!derivedPath) return;
+        const ext = "." + derivedPath.split(".").pop()!.toLowerCase();
+        if (!ALLOWED_WRITE_EXTS.has(ext)) return;
+        try {
+          const content = await file.text();
+          newEntries.push({ path: derivedPath, content, size: content.length });
+        } catch {}
+      }),
+    );
+
+    if (newEntries.length === 0) return;
+
+    setZipEntries((prev) => {
+      const map = new Map(prev.map((e) => [e.path, e]));
+      for (const entry of newEntries) map.set(entry.path, entry);
+      const merged = Array.from(map.values()).sort((a, b) =>
+        a.path.localeCompare(b.path),
+      );
+      return merged;
+    });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const entry of newEntries) next.add(entry.path);
+      return next;
+    });
+
+    e.target.value = "";
+  }
+
   function toggleFile(p: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -117,7 +161,7 @@ export default function ZipApplyPage() {
 
     for (const entry of toApply) {
       try {
-        const res = await fetch("/api/apply-zip", {
+        const res = await fetch("/api/applier", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -158,7 +202,7 @@ export default function ZipApplyPage() {
             className="text-2xl font-bold"
             style={{ color: "var(--primary)" }}
           >
-            Zip Apply
+            Code Applier
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>
             Apply zip file contents directly to a local repo with
@@ -190,7 +234,7 @@ export default function ZipApplyPage() {
             className="text-2xl font-bold"
             style={{ color: "var(--primary)" }}
           >
-            Zip Apply
+            Code Applier
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>
             Apply zip file contents directly to a local repo with
@@ -207,12 +251,12 @@ export default function ZipApplyPage() {
               repos={repos}
               selectedPath={selectedRepo?.path ?? null}
               onChange={setSelectedRepo}
-              storageKey="zipApply_lastRepo"
+              storageKey="codeapplier_lastRepo"
             />
           </div>
 
           <div className="card space-y-2 flex-shrink-0">
-            <p className="section-label mb-0">Zip File</p>
+            <p className="section-label mb-0">Files</p>
             <input
               ref={inputRef}
               type="file"
@@ -220,17 +264,33 @@ export default function ZipApplyPage() {
               className="hidden"
               onChange={handleZipPick}
             />
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="btn-ghost text-xs py-1.5 px-3"
-              disabled={loadingZip}
-            >
-              {loadingZip
-                ? "Reading…"
-                : zipName
-                  ? `📦 ${zipName}`
-                  : "Pick Zip File"}
-            </button>
+            <input
+              ref={filesInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFilesPick}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => inputRef.current?.click()}
+                className="btn-ghost text-xs py-1.5 px-3 flex-1"
+                disabled={loadingZip}
+              >
+                {loadingZip
+                  ? "Reading…"
+                  : zipName
+                    ? `📦 ${zipName}`
+                    : "Pick Zip"}
+              </button>
+              <button
+                onClick={() => filesInputRef.current?.click()}
+                className="btn-ghost text-xs py-1.5 px-3 flex-1"
+                disabled={loadingZip}
+              >
+                Pick Files
+              </button>
+            </div>
             {error && (
               <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
                 {error}
@@ -318,7 +378,7 @@ export default function ZipApplyPage() {
                 style={{ color: "var(--muted)" }}
               >
                 {zipEntries.length === 0
-                  ? "Pick a zip file and a repo to get started…"
+                  ? "Pick a zip file or files and a repo to get started…"
                   : "Select files and click Apply…"}
               </p>
             ) : (

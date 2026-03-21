@@ -28,7 +28,7 @@ Do not make up non-existent problems for the sake of feedback. If the code is go
 SERIOUSLY, DO NOT USE M-DASH.`.trim();
 
 export const DEFAULT_PROMPT =
-  "This is the summary of codebase. Tell me which files you need the full version to do the following task";
+  "This is either the summary of codebase or the complete codebase. IF THIS IS THE SUMMARY, tell me which files you need the full version to do the following task";
 
 export const DEFAULT_PROMPT_2 = "This is the code";
 
