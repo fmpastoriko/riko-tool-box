@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
     const rows = await neonDb`
       SELECT id, title, repo_path, model, created_at FROM chat_sessions
       WHERE user_id = ${hashedIp}
-      AND (${ownerUserId}::text IS NULL OR user_id != ${ownerUserId})
       ORDER BY created_at DESC LIMIT 10
     `;
     return NextResponse.json({ sessions: rows });

@@ -1,11 +1,8 @@
-import { PDFDocument, StandardFonts } from "pdf-lib";
-
 export const A4_W = 595.28;
 export const A4_H = 841.89;
 export const MARGIN = 40;
 export const ANSWER_KEY_PER_ROW = 3;
 export const ANSWER_KEY_PER_COL = 3;
-export const ANSWER_KEY_PER_PAGE = ANSWER_KEY_PER_ROW * ANSWER_KEY_PER_COL;
 
 export function getAnswerKeyLayout() {
   const usableW = A4_W - MARGIN * 2;
@@ -13,20 +10,6 @@ export function getAnswerKeyLayout() {
   const slotW = usableW / ANSWER_KEY_PER_ROW;
   const slotH = usableH / ANSWER_KEY_PER_COL;
   return { slotW, slotH };
-}
-
-export async function drawAnswerKeyHeader(
-  pdfDoc: PDFDocument,
-  font: Awaited<ReturnType<PDFDocument["embedFont"]>>,
-) {
-  const page = pdfDoc.addPage([A4_W, A4_H]);
-  page.drawText("Answer Key", {
-    x: MARGIN,
-    y: A4_H - MARGIN + 4,
-    size: 10,
-    font,
-  });
-  return page;
 }
 
 export function getPuzzleBounds(

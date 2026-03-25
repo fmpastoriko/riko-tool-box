@@ -2,18 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { WordSearchPuzzle } from "@/lib/wordSearch";
 import { sendPdfResponse } from "@/lib/pdfUtils";
-import { A4_W, A4_H, MARGIN, ANSWER_KEY_PER_ROW, ANSWER_KEY_PER_COL, getAnswerKeyLayout } from "@/lib/pdfLayout";
+import {
+  A4_W,
+  A4_H,
+  MARGIN,
+  ANSWER_KEY_PER_ROW,
+  ANSWER_KEY_PER_COL,
+  getAnswerKeyLayout,
+} from "@/lib/pdfLayout";
 
-const CELL = 24;
-
-function drawWordSearchPage(pdfDoc: PDFDocument, puzzle: WordSearchPuzzle) {
+async function drawWordSearchPage(
+  pdfDoc: PDFDocument,
+  puzzle: WordSearchPuzzle,
+) {
   const page = pdfDoc.addPage([A4_W, A4_H]);
   const { grid, words, gridSize, topic } = puzzle as WordSearchPuzzle & {
     topic?: string;
   };
 
-  const font = pdfDoc.embedStandardFont(StandardFonts.HelveticaBold);
-  const fontReg = pdfDoc.embedStandardFont(StandardFonts.Helvetica);
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   const headerText = "Tanpa melihat HP, isi tanggal dan hari ini:";
   const headerY = A4_H - MARGIN;
@@ -57,9 +65,12 @@ function drawWordSearchPage(pdfDoc: PDFDocument, puzzle: WordSearchPuzzle) {
   });
 }
 
-function drawAnswerKeyPages(pdfDoc: PDFDocument, puzzles: WordSearchPuzzle[]) {
-  const font = pdfDoc.embedStandardFont(StandardFonts.HelveticaBold);
-  const fontReg = pdfDoc.embedStandardFont(StandardFonts.Helvetica);
+async function drawAnswerKeyPages(
+  pdfDoc: PDFDocument,
+  puzzles: WordSearchPuzzle[],
+) {
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   const PER_PAGE = ANSWER_KEY_PER_ROW * ANSWER_KEY_PER_COL;
   const { slotW, slotH } = getAnswerKeyLayout();
@@ -152,10 +163,10 @@ export async function POST(req: NextRequest) {
   const pdfDoc = await PDFDocument.create();
 
   for (let i = 0; i < puzzles.length; i++) {
-    drawWordSearchPage(pdfDoc, puzzles[i]);
+    await drawWordSearchPage(pdfDoc, puzzles[i]);
   }
 
-  drawAnswerKeyPages(pdfDoc, puzzles);
+  await drawAnswerKeyPages(pdfDoc, puzzles);
 
   return sendPdfResponse(pdfDoc, "word-search.pdf");
 }

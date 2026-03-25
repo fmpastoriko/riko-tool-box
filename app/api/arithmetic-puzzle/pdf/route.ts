@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Puzzle, GridCell } from "@/lib/arithmeticPuzzle";
 import { sendPdfResponse } from "@/lib/pdfUtils";
-import { A4_W, A4_H, MARGIN, ANSWER_KEY_PER_ROW, ANSWER_KEY_PER_COL, getAnswerKeyLayout, getPuzzleBounds } from "@/lib/pdfLayout";
+import {
+  A4_W,
+  A4_H,
+  MARGIN,
+  ANSWER_KEY_PER_ROW,
+  ANSWER_KEY_PER_COL,
+  getAnswerKeyLayout,
+  getPuzzleBounds,
+} from "@/lib/pdfLayout";
 
-const CELL = 30;
 const FONT_SIZE = 10;
 const HEADER_SIZE = 9;
+const CELL = 30;
 
 async function drawPuzzlePage(pdfDoc: PDFDocument, puzzle: Puzzle) {
   const page = pdfDoc.addPage([A4_W, A4_H]);
@@ -18,7 +26,6 @@ async function drawPuzzlePage(pdfDoc: PDFDocument, puzzle: Puzzle) {
 
   const { r0, r1, c0, c1, visRows, visCols } = bounds;
   const gridW = visCols * CELL;
-  const gridH = visRows * CELL;
 
   const headerText = "Tanpa melihat HP, isi tanggal dan hari ini:";
   const headerY = A4_H - MARGIN;
@@ -55,8 +62,6 @@ async function drawPuzzlePage(pdfDoc: PDFDocument, puzzle: Puzzle) {
       }
     }
   }
-
-  const bottomY = startY - gridH - 20;
 }
 
 async function drawAnswerKeyPages(pdfDoc: PDFDocument, puzzles: Puzzle[]) {

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
@@ -23,8 +22,7 @@ import {
   loadDraft,
   saveDraft,
   clearDraft,
-  LAST_REPO_KEY,
-  DRAFT_KEY,
+  LAST_REPO_KEY
 } from "@/lib/briefer/draft";
 import {
   buildAnalyticalSystemPrompt,
@@ -36,14 +34,10 @@ import type { ModelInfo } from "@/components/chatbot/types";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
 import Card from "@/components/Card";
-import SectionLabel from "@/components/SectionLabel";
 import TagButton from "@/components/TagButton";
-import StatusBadge from "@/components/StatusBadge";
 import MonoText from "@/components/MonoText";
 import ErrorText from "@/components/ErrorText";
-
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
-
 type FileEntry = { path: string; size: number };
 type Template = {
   id: string;
@@ -52,7 +46,6 @@ type Template = {
   used_count: number;
   type: "analytical" | "change" | null;
 };
-
 const CONTEXT_MODE_CYCLE: ContextMode[] = ["off", "names", "semi", "full"];
 const CONTEXT_MODE_LABELS: Record<ContextMode, string> = {
   off: "Context Off",
@@ -60,7 +53,6 @@ const CONTEXT_MODE_LABELS: Record<ContextMode, string> = {
   semi: "Semi Context",
   full: "Full Context",
 };
-
 export default function CodeBrieferPage() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -69,7 +61,6 @@ export default function CodeBrieferPage() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-
   const [repos, setRepos] = useState<{ label: string; path: string }[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<{
     label: string;
@@ -87,12 +78,10 @@ export default function CodeBrieferPage() {
   const [joinedFiles, setJoinedFiles] = useState<
     { path: string; content: string }[]
   >([]);
-
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [folderInputKey, setFolderInputKey] = useState(0);
   const [folderProgress, setFolderProgress] = useState<number | null>(null);
   const [waitingForPick, setWaitingForPick] = useState(false);
-
   useEffect(() => {
     const input = folderInputRef.current;
     if (!input) return;
@@ -100,7 +89,6 @@ export default function CodeBrieferPage() {
     input.addEventListener("cancel", onCancel);
     return () => input.removeEventListener("cancel", onCancel);
   }, []);
-
   const [enabledExts, setEnabledExts] = useState<Set<string>>(
     new Set(DEFAULT_EXTS),
   );
@@ -111,7 +99,6 @@ export default function CodeBrieferPage() {
   );
   const safeSelectedTemplates =
     selectedTemplates instanceof Set ? selectedTemplates : new Set<string>();
-
   const [promptBody, setPromptBody] = useState(DEFAULT_PROMPT);
   const [additionalPrompt, setAdditionalPrompt] = useState("");
   const [fileNamesHint, setFileNamesHint] = useState("");
@@ -122,7 +109,6 @@ export default function CodeBrieferPage() {
   const [copied, setCopied] = useState(false);
   const [repoError, setRepoError] = useState("");
   const router = useRouter();
-
   const [llmSuggestion, setLlmSuggestion] = useState("");
   const [llmSkippedReason, setLlmSkippedReason] = useState("");
   const [llmEnabled, setLlmEnabled] = useState(true);
@@ -132,7 +118,6 @@ export default function CodeBrieferPage() {
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const llmRef = useRef<HTMLTextAreaElement>(null);
   const llmAbortRef = useRef<AbortController | null>(null);
-
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [modelUsed, setModelUsed] = useState<string>("");
@@ -140,11 +125,9 @@ export default function CodeBrieferPage() {
   const [applyResults, setApplyResults] = useState<
     { file: string; ok: boolean; prettified?: boolean; error: string }[]
   >([]);
-
   const draftRestoredRef = useRef(false);
   const selectedRepoRef = useRef<{ label: string; path: string } | null>(null);
   const [fileSearchTerm, setFileSearchTerm] = useState("");
-
   const activeExts = useMemo(() => {
     const extras = customExts
       .split(",")
@@ -153,7 +136,6 @@ export default function CodeBrieferPage() {
       .map((e) => (e.startsWith(".") ? e : `.${e}`));
     return new Set([...enabledExts, ...extras]);
   }, [enabledExts, customExts]);
-
   const filteredFiles = useMemo(
     () =>
       allFiles.filter((f) => {
@@ -162,17 +144,14 @@ export default function CodeBrieferPage() {
       }),
     [allFiles, activeExts],
   );
-
   const displayedFiles = useMemo(() => {
     if (!fileSearchTerm) return filteredFiles;
     const lower = fileSearchTerm.toLowerCase();
     return filteredFiles.filter((f) => f.path.toLowerCase().includes(lower));
   }, [filteredFiles, fileSearchTerm]);
-
   const allDisplayedSelected =
     displayedFiles.length > 0 &&
     displayedFiles.every((f) => selectedFiles.has(f.path));
-
   useEffect(() => {
     fetch("/api/chatbot/models")
       .then((r) => r.json())
@@ -181,7 +160,6 @@ export default function CodeBrieferPage() {
       })
       .catch(() => {});
   }, []);
-
   useEffect(() => {
     if (isLocal) {
       fetch("/api/code-briefer/files")
@@ -242,7 +220,6 @@ export default function CodeBrieferPage() {
       })
       .catch(() => {});
   }, []);
-
   function restoreLastRepo(repos: { label: string; path: string }[]) {
     try {
       const lastPath = localStorage.getItem(LAST_REPO_KEY);
@@ -252,7 +229,6 @@ export default function CodeBrieferPage() {
       }
     } catch {}
   }
-
   useEffect(() => {
     if (!draftRestoredRef.current || !isLocal) return;
     saveDraft({
@@ -279,11 +255,9 @@ export default function CodeBrieferPage() {
     selectedRepo,
     selectedFiles,
   ]);
-
   useEffect(() => {
     selectedRepoRef.current = selectedRepo;
   }, [selectedRepo]);
-
   useEffect(() => {
     if (!isLocal || !selectedRepoRef.current) return;
     const repo = selectedRepoRef.current;
@@ -308,7 +282,6 @@ export default function CodeBrieferPage() {
       .catch((e) => setRepoError(String(e)))
       .finally(() => setLoadingFiles(false));
   }, [activeExts]);
-
   async function loadRepo(repo: { label: string; path: string }) {
     setSelectedRepo(repo);
     selectedRepoRef.current = repo;
@@ -347,7 +320,6 @@ export default function CodeBrieferPage() {
       setLoadingFiles(false);
     }
   }
-
   async function handleFolderPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) {
@@ -367,7 +339,6 @@ export default function CodeBrieferPage() {
     setLlmSkippedReason("");
     setChatSessionId(null);
     setRepoError("");
-
     const folderName = files[0].webkitRelativePath.split("/")[0];
     setSelectedRepo({ label: folderName, path: folderName });
     const allFileList = Array.from(files);
@@ -382,12 +353,10 @@ export default function CodeBrieferPage() {
         gitignorePatterns = parseGitignore(raw);
       } catch {}
     }
-
     const entries: FileEntry[] = [];
     const contents = new Map<string, string>();
     let processed = 0;
     const BATCH = 50;
-
     for (let i = 0; i < allFileList.length; i += BATCH) {
       const batch = allFileList.slice(i, i + BATCH);
       await Promise.all(
@@ -415,7 +384,6 @@ export default function CodeBrieferPage() {
     setFolderProgress(null);
     setLoadingFiles(false);
   }
-
   function toggleFile(p: string) {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
@@ -423,7 +391,6 @@ export default function CodeBrieferPage() {
       return next;
     });
   }
-
   function toggleExt(ext: string) {
     setEnabledExts((prev) => {
       const next = new Set(prev);
@@ -431,7 +398,6 @@ export default function CodeBrieferPage() {
       return next;
     });
   }
-
   function selectTemplate(t: Template) {
     if (selectedTemplates.has(t.id)) {
       setSelectedTemplates(new Set());
@@ -444,7 +410,6 @@ export default function CodeBrieferPage() {
       setPromptBody(t.body);
     }
   }
-
   function toggleFullContext(filePath: string) {
     setFullContextFiles((prev) => {
       const next = new Set(prev);
@@ -462,7 +427,6 @@ export default function CodeBrieferPage() {
       return next;
     });
   }
-
   function expandAllContext() {
     const all = new Set(joinedFiles.map((f) => f.path));
     setFullContextFiles(all);
@@ -477,7 +441,6 @@ export default function CodeBrieferPage() {
       ),
     );
   }
-
   function collapseAllContext() {
     const none = new Set<string>();
     setFullContextFiles(none);
@@ -492,11 +455,9 @@ export default function CodeBrieferPage() {
       ),
     );
   }
-
   const allExpanded =
     joinedFiles.length > 0 &&
     joinedFiles.every((f) => fullContextFiles.has(f.path));
-
   async function streamLlmSuggestion(contextOutput: string) {
     setLlmSuggestion("");
     setLlmSkippedReason("");
@@ -584,7 +545,6 @@ export default function CodeBrieferPage() {
       setLlmStreaming(false);
     }
   }
-
   async function handleSmartSelect() {
     if (!selectedRepo || filteredFiles.length === 0 || !promptBody.trim())
       return;
@@ -646,7 +606,6 @@ export default function CodeBrieferPage() {
       setLoadingSmartSelect(false);
     }
   }
-
   async function handleJoin() {
     if (!selectedRepo || selectedFiles.size === 0) return;
     setJoining(true);
@@ -741,7 +700,6 @@ export default function CodeBrieferPage() {
       setJoining(false);
     }
   }
-
   async function handleApplyChanges(revert: boolean = false) {
     if (!selectedRepo || !llmSuggestion || llmStreaming) return;
     const blocks = parseSuggestion(llmSuggestion);
@@ -780,7 +738,6 @@ export default function CodeBrieferPage() {
     setApplyResults(results);
     setApplying(false);
   }
-
   function handleDownload() {
     const label = (
       templates
@@ -800,7 +757,6 @@ export default function CodeBrieferPage() {
     a.download = `context-${label}-${ts}.txt`;
     a.click();
   }
-
   const tokenCount = useMemo(() => estimateTokens(output), [output]);
   const isDefault1 = promptBody === DEFAULT_PROMPT;
   const isDefault2 = promptBody === DEFAULT_PROMPT_2;
@@ -818,14 +774,12 @@ export default function CodeBrieferPage() {
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
   const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-briefer");
-
   function cycleContextMode() {
     setContextMode((prev) => {
       const idx = CONTEXT_MODE_CYCLE.indexOf(prev);
       return CONTEXT_MODE_CYCLE[(idx + 1) % CONTEXT_MODE_CYCLE.length];
     });
   }
-
   if (isMobile) {
     return (
       <div className="flex-1 flex items-center justify-center text-center px-6">
@@ -844,7 +798,6 @@ export default function CodeBrieferPage() {
       </div>
     );
   }
-
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
@@ -855,11 +808,9 @@ export default function CodeBrieferPage() {
         />
         <HistoryButton href="/tools/code-briefer/history" />
       </div>
-
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
-          <Card className="space-y-2 flex-shrink-0">
-            <SectionLabel noMargin>Repository</SectionLabel>
+          <Card title="Repository" className="flex-shrink-0">
             {isLocal ? (
               <>
                 <RepoSelector
@@ -917,10 +868,10 @@ export default function CodeBrieferPage() {
               </div>
             )}
           </Card>
-
-          <Card className="flex-shrink-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <SectionLabel noMargin>Extensions</SectionLabel>
+          <Card
+            title="Extensions"
+            className="flex-shrink-0"
+            headerRight={
               <input
                 type="text"
                 className="input-base"
@@ -934,7 +885,8 @@ export default function CodeBrieferPage() {
                 value={customExts}
                 onChange={(e) => setCustomExts(e.target.value)}
               />
-            </div>
+            }
+          >
             <div className="flex flex-wrap gap-1">
               {[...EXT_GROUPS.flatMap((g) => g.exts)].map((ext) => (
                 <TagButton
@@ -948,11 +900,11 @@ export default function CodeBrieferPage() {
               ))}
             </div>
           </Card>
-
           {selectedRepo && (
-            <Card className="flex flex-col min-h-0 flex-1">
-              <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
-                <SectionLabel noMargin>Files</SectionLabel>
+            <Card
+              title="Files"
+              className="flex flex-col min-h-0 flex-1"
+              headerRight={
                 <div className="flex items-center gap-1.5">
                   <MonoText color="muted">
                     {selectedFiles.size}/{displayedFiles.length}
@@ -982,7 +934,8 @@ export default function CodeBrieferPage() {
                     {allDisplayedSelected ? "none" : "all"}
                   </button>
                 </div>
-              </div>
+              }
+            >
               <input
                 type="text"
                 placeholder="Search files..."
@@ -1000,7 +953,6 @@ export default function CodeBrieferPage() {
               </div>
             </Card>
           )}
-
           <div className="flex flex-col gap-1.5 flex-shrink-0">
             <div className="flex gap-1.5">
               <button
@@ -1083,23 +1035,24 @@ export default function CodeBrieferPage() {
             </button>
           </div>
         </div>
-
         <div className="flex-1 flex flex-col min-h-0 gap-3">
-          <Card className="flex-shrink-0 space-y-2">
-            <div className="flex flex-wrap gap-1.5 items-center">
-              <SectionLabel noMargin className="mr-1">
-                Prompt
-              </SectionLabel>
-              {templates.map((t) => (
-                <TagButton
-                  key={t.id}
-                  active={safeSelectedTemplates.has(t.id)}
-                  onClick={() => selectTemplate(t)}
-                >
-                  {t.label}
-                </TagButton>
-              ))}
-            </div>
+          <Card
+            title="Prompt"
+            className="flex-shrink-0"
+            headerRight={
+              <>
+                {templates.map((t) => (
+                  <TagButton
+                    key={t.id}
+                    active={safeSelectedTemplates.has(t.id)}
+                    onClick={() => selectTemplate(t)}
+                  >
+                    {t.label}
+                  </TagButton>
+                ))}
+              </>
+            }
+          >
             <div className="flex gap-2">
               <div className="flex-1 flex flex-col gap-1">
                 <div className="flex justify-start gap-1">
@@ -1181,7 +1134,6 @@ export default function CodeBrieferPage() {
               </div>
             </div>
           </Card>
-
           <div className="flex-1 flex gap-3 min-h-0">
             <LlmSuggestionPanel
               llmSuggestion={llmSuggestion}

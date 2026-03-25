@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
+import path from "path";
 import { requireLocal } from "@/lib/localGuard";
 import { validateFileWrite } from "@/lib/validateFileWrite";
 import { prettifiedResponse, internalError } from "@/lib/apiUtils";
 import { runPrettier } from "@/lib/prettierFile";
+
+const BACKUP_DIR = "/tmp/code-applier-backup";
 
 export async function POST(req: NextRequest) {
   const guard = requireLocal();
@@ -23,18 +26,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const resolvedBackup = path.resolve(backupPath);
+    const resolvedDir = path.resolve(BACKUP_DIR);
+    if (!resolvedBackup.startsWith(resolvedDir + path.sep)) {
+      return NextResponse.json(
+        { error: "Invalid backup path" },
+        { status: 400 },
+      );
+    }
+
     const validated = validateFileWrite(repoPath, filePath);
     if ("error" in validated) return validated.error;
     const { abs } = validated;
 
-    if (!fs.existsSync(backupPath)) {
+    if (!fs.existsSync(resolvedBackup)) {
       return NextResponse.json(
         { error: "Backup file not found" },
         { status: 404 },
       );
     }
 
-    fs.copyFileSync(backupPath, abs);
+    fs.copyFileSync(resolvedBackup, abs);
     const prettified = runPrettier(abs, repoPath);
     return prettifiedResponse(prettified !== null && prettified !== undefined);
   } catch {

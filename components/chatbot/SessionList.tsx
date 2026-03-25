@@ -1,6 +1,6 @@
 "use client";
-
 import type { ChatSession } from "./types";
+import Card from "@/components/Card";
 
 export default function SessionList({
   sessions,
@@ -14,7 +14,7 @@ export default function SessionList({
   onDelete: (e: React.MouseEvent, id: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
+    <Card title="Session History" className="flex-1 min-h-0">
       {sessions.length === 0 && (
         <p className="text-xs font-mono px-2" style={{ color: "var(--muted)" }}>
           No sessions yet
@@ -26,9 +26,11 @@ export default function SessionList({
           onClick={() => onSelect(s)}
           className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all group flex items-center justify-between gap-1 flex-shrink-0 font-mono"
           style={{
-            background: activeSession?.id === s.id ? "var(--accent-dim)" : "transparent",
+            background:
+              activeSession?.id === s.id ? "var(--accent-dim)" : "transparent",
             border: `1px solid ${activeSession?.id === s.id ? "var(--accent)" : "var(--border)"}`,
-            color: activeSession?.id === s.id ? "var(--accent)" : "var(--muted)",
+            color:
+              activeSession?.id === s.id ? "var(--accent)" : "var(--muted)",
           }}
         >
           <span className="truncate flex-1">{s.title}</span>
@@ -41,6 +43,6 @@ export default function SessionList({
           </span>
         </button>
       ))}
-    </div>
+    </Card>
   );
 }

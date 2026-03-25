@@ -11,20 +11,18 @@ import ToolHeader from "@/components/ToolHeader";
 import PanelBox from "@/components/PanelBox";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolOptionsPanel from "@/components/ToolOptionsPanel";
+import Slider from "@/components/Slider";
 import PuzzleNavigation from "@/components/PuzzleNavigation";
 import { downloadPdf } from "@/lib/downloadPdf";
 import HistoryButton from "@/components/HistoryButton";
 import LatestButton from "@/components/LatestButton";
 import Card from "@/components/Card";
-import SectionLabel from "@/components/SectionLabel";
 import TagButton from "@/components/TagButton";
 import EmptyState from "@/components/EmptyState";
 import ErrorText from "@/components/ErrorText";
-
 const toolConfig = TOOLS_CONFIG.find(
   (t) => t.href === "/tools/arithmetic-puzzle",
 )!;
-
 const ALL_OPERATORS: Operator[] = ["+", "-", "*", "/"];
 const OPERATOR_LABELS: Record<Operator, string> = {
   "+": "+",
@@ -32,13 +30,11 @@ const OPERATOR_LABELS: Record<Operator, string> = {
   "*": "×",
   "/": "÷",
 };
-
 const ALL_HIDE_TARGETS: HideTarget[] = ["operator", "number"];
 const HIDE_TARGET_LABELS: Record<HideTarget, string> = {
   operator: "Operator",
   number: "Number",
 };
-
 interface FormState {
   operators: Operator[];
   minNum: number;
@@ -49,7 +45,6 @@ interface FormState {
   count: number;
   hideTargets: HideTarget[];
 }
-
 interface Session {
   id: string;
   options_json: string;
@@ -57,7 +52,6 @@ interface Session {
   created_at: string;
   is_own: boolean;
 }
-
 export default function ArithmeticPuzzlePage() {
   const [form, setForm] = useState<FormState>({
     operators: ["+", "-", "*"],
@@ -77,13 +71,11 @@ export default function ArithmeticPuzzlePage() {
   const [error, setError] = useState("");
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const pdfPreviewRef = useRef<HTMLIFrameElement>(null);
-
   useEffect(() => {
     return () => {
       if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
     };
   }, [pdfPreviewUrl]);
-
   const updatePdfPreview = useCallback(async (puz: Puzzle[]) => {
     if (puz.length === 0) return;
     try {
@@ -101,7 +93,6 @@ export default function ArithmeticPuzzlePage() {
       });
     } catch {}
   }, []);
-
   const toggleOperator = (op: Operator) => {
     setForm((f) => {
       const has = f.operators.includes(op);
@@ -114,7 +105,6 @@ export default function ArithmeticPuzzlePage() {
       };
     });
   };
-
   const toggleHideTarget = (target: HideTarget) => {
     setForm((f) => {
       const has = f.hideTargets.includes(target);
@@ -127,7 +117,6 @@ export default function ArithmeticPuzzlePage() {
       };
     });
   };
-
   const handleGenerate = useCallback(async () => {
     setError("");
     setGenerating(true);
@@ -162,7 +151,6 @@ export default function ArithmeticPuzzlePage() {
       setGenerating(false);
     }
   }, [form, updatePdfPreview]);
-
   const handleLoadLatest = useCallback(
     (session: unknown) => {
       const s = session as Session;
@@ -179,7 +167,6 @@ export default function ArithmeticPuzzlePage() {
     },
     [updatePdfPreview],
   );
-
   const handleDownload = useCallback(async () => {
     if (puzzles.length === 0) return;
     setDownloading(true);
@@ -196,9 +183,7 @@ export default function ArithmeticPuzzlePage() {
       setDownloading(false);
     }
   }, [puzzles, updatePdfPreview]);
-
   const current = puzzles[currentIndex];
-
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">
       <div className="flex items-start justify-between flex-shrink-0">
@@ -215,13 +200,9 @@ export default function ArithmeticPuzzlePage() {
           <HistoryButton href="/tools/arithmetic-puzzle/history" />
         </div>
       </div>
-
       <div className="flex gap-4 flex-1 min-h-0 flex-col lg:flex-row">
         <ToolOptionsPanel>
-          <Card className="flex-shrink-0">
-            <SectionLabel noMargin style={{ color: "var(--muted)" }}>
-              Operators
-            </SectionLabel>
+          <Card title="Operators" className="flex-shrink-0">
             <div className="flex gap-2 flex-wrap mt-1">
               {ALL_OPERATORS.map((op) => (
                 <TagButton
@@ -235,11 +216,7 @@ export default function ArithmeticPuzzlePage() {
               ))}
             </div>
           </Card>
-
-          <Card className="flex-shrink-0">
-            <SectionLabel noMargin style={{ color: "var(--muted)" }}>
-              Number Range
-            </SectionLabel>
+          <Card title="Number Range" className="flex-shrink-0">
             <div className="flex gap-2 items-center mt-1">
               <input
                 type="number"
@@ -248,11 +225,6 @@ export default function ArithmeticPuzzlePage() {
                   setForm((f) => ({ ...f, minNum: Number(e.target.value) }))
                 }
                 className="input-base w-20"
-                style={{
-                  background: "var(--bg)",
-                  color: "var(--primary)",
-                  border: "1px solid var(--border)",
-                }}
               />
               <span
                 className="text-xs font-mono"
@@ -267,58 +239,26 @@ export default function ArithmeticPuzzlePage() {
                   setForm((f) => ({ ...f, maxNum: Number(e.target.value) }))
                 }
                 className="input-base w-20"
-                style={{
-                  background: "var(--bg)",
-                  color: "var(--primary)",
-                  border: "1px solid var(--border)",
-                }}
               />
             </div>
           </Card>
-
-          <Card className="flex-shrink-0">
-            <SectionLabel noMargin style={{ color: "var(--muted)" }}>
-              Question Count ({form.questionCount})
-            </SectionLabel>
-            <input
-              type="range"
-              min={10}
-              max={60}
-              value={form.questionCount}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  questionCount: Number(e.target.value),
-                }))
-              }
-              className="w-full mt-1"
-            />
-          </Card>
-
-          <Card className="flex-shrink-0">
-            <SectionLabel noMargin style={{ color: "var(--muted)" }}>
-              Hidden Cells ({form.hidePercentage}%)
-            </SectionLabel>
-            <input
-              type="range"
-              min={10}
-              max={70}
-              step={5}
-              value={form.hidePercentage}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  hidePercentage: Number(e.target.value),
-                }))
-              }
-              className="w-full mt-1"
-            />
-          </Card>
-
-          <Card className="flex-shrink-0">
-            <SectionLabel noMargin style={{ color: "var(--muted)" }}>
-              Hide
-            </SectionLabel>
+          <Slider
+            label="Question Count"
+            value={form.questionCount}
+            min={10}
+            max={60}
+            onChange={(v) => setForm((f) => ({ ...f, questionCount: v }))}
+          />
+          <Slider
+            label="Hidden Cells"
+            value={form.hidePercentage}
+            min={10}
+            max={70}
+            step={5}
+            unit="%"
+            onChange={(v) => setForm((f) => ({ ...f, hidePercentage: v }))}
+          />
+          <Card title="Hide" className="flex-shrink-0">
             <div className="flex gap-2 flex-wrap mt-1">
               {ALL_HIDE_TARGETS.map((target) => (
                 <TagButton
@@ -331,31 +271,13 @@ export default function ArithmeticPuzzlePage() {
               ))}
             </div>
           </Card>
-
-          <Card className="flex-shrink-0">
-            <SectionLabel noMargin style={{ color: "var(--muted)" }}>
-              Number of Puzzles
-            </SectionLabel>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={form.count}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  count: Math.max(1, Math.min(20, Number(e.target.value))),
-                }))
-              }
-              className="input-base mt-1"
-              style={{
-                background: "var(--bg)",
-                color: "var(--primary)",
-                border: "1px solid var(--border)",
-              }}
-            />
-          </Card>
-
+          <Slider
+            label="Number of Puzzles"
+            value={form.count}
+            min={1}
+            max={20}
+            onChange={(v) => setForm((f) => ({ ...f, count: v }))}
+          />
           <Card className="flex-shrink-0">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -373,7 +295,6 @@ export default function ArithmeticPuzzlePage() {
               </span>
             </label>
           </Card>
-
           <button
             onClick={handleGenerate}
             disabled={generating}
@@ -383,7 +304,6 @@ export default function ArithmeticPuzzlePage() {
             {generating ? "Generating..." : "Generate"}
           </button>
         </ToolOptionsPanel>
-
         <PanelBox
           title={`Preview${puzzles.length > 0 ? ` (${currentIndex + 1} / ${puzzles.length})` : ""}`}
           headerRight={
