@@ -4,7 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Timeline from "@/components/Timeline";
 import Link from "next/link";
-import { TOOLS_CONFIG, MAX_HIGHLIGHTED, type ToolIcon } from "@/config/tools";
+import { TOOLS_CONFIG, MAX_HIGHLIGHTED } from "@/config/tools";
+import { ToolIcon } from "@/components/ToolIcon";
+import SectionLabel from "@/components/SectionLabel";
 
 const is_local = process.env.NEXT_PUBLIC_LOCAL === "true";
 
@@ -13,194 +15,6 @@ const BIO_TEXT =
 
 const WARNING_TEXT =
   "WARNING!!! For demo/portfolio purpose only. Don't enter sensitive data. For real use, run it locally (clone the repo). Reach out if you need help.";
-
-function ToolIcon({
-  type,
-  size = 22,
-}: {
-  type: ToolIcon | "alltools" | "comingsoon";
-  size?: number;
-}) {
-  if (type === "chatbot")
-    return (
-      <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
-        <rect
-          x="2"
-          y="3"
-          width="22"
-          height="14"
-          rx="4"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <circle cx="8.5" cy="10" r="1.6" fill="white" />
-        <circle cx="13" cy="10" r="1.6" fill="white" />
-        <circle cx="17.5" cy="10" r="1.6" fill="white" />
-        <path
-          d="M9.5 17l2 3.5L13 18l1.5 2.5 2-3.5"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.9"
-        />
-      </svg>
-    );
-  if (type === "codebriefer")
-    return (
-      <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
-        <rect
-          x="2"
-          y="2"
-          width="22"
-          height="22"
-          rx="4"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <path
-          d="M8.5 9.5L6 12 8.5 14.5"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M17.5 9.5L20 12 17.5 14.5"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M15 7l-4 12"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  if (type === "textcompare")
-    return (
-      <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
-        <rect
-          x="2"
-          y="2"
-          width="10"
-          height="22"
-          rx="3"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <rect
-          x="14"
-          y="2"
-          width="10"
-          height="22"
-          rx="3"
-          fill="currentColor"
-          opacity="0.4"
-        />
-        <path
-          d="M5.5 8h5M5.5 11.5h3.5M5.5 15h5M5.5 18.5h2.5"
-          stroke="white"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M17 8h4M17 11.5h2.5M17 15h4M17 18.5h3"
-          stroke="white"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          opacity="0.7"
-        />
-      </svg>
-    );
-  if (type === "codeapplier")
-    return (
-      <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
-        <rect
-          x="2"
-          y="2"
-          width="22"
-          height="22"
-          rx="4"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <path
-          d="M13 7v8M13 15l-3-3M13 15l3-3"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M7 18h12"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  if (type === "alltools")
-    return (
-      <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-        <rect
-          x="1"
-          y="1"
-          width="7.5"
-          height="7.5"
-          rx="2.5"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <rect
-          x="11.5"
-          y="1"
-          width="7.5"
-          height="7.5"
-          rx="2.5"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <rect
-          x="1"
-          y="11.5"
-          width="7.5"
-          height="7.5"
-          rx="2.5"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <rect
-          x="11.5"
-          y="11.5"
-          width="7.5"
-          height="7.5"
-          rx="2.5"
-          fill="currentColor"
-          opacity="0.9"
-        />
-      </svg>
-    );
-  return (
-    <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
-      <rect
-        x="2"
-        y="2"
-        width="22"
-        height="22"
-        rx="4"
-        fill="currentColor"
-        opacity="0.12"
-      />
-      <circle cx="13" cy="13" r="2" fill="currentColor" opacity="0.2" />
-      <circle cx="7.5" cy="13" r="1.5" fill="currentColor" opacity="0.15" />
-      <circle cx="18.5" cy="13" r="1.5" fill="currentColor" opacity="0.15" />
-    </svg>
-  );
-}
 
 const highlightedTools = TOOLS_CONFIG.filter(
   (t) => t.highlight && (!t.localOnly || is_local),
@@ -387,7 +201,7 @@ function TimelineFullscreen({
         style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
         <div className="flex items-baseline gap-2">
-          <p className="section-label mb-0">Experience</p>
+          <SectionLabel noMargin>Experience</SectionLabel>
           <h2
             className="text-lg font-semibold"
             style={{ color: "var(--primary)" }}
@@ -457,7 +271,7 @@ export default function HomePage() {
               className="w-28 h-28 rounded-2xl object-cover flex-shrink-0"
             />
             <div className="min-w-0">
-              <p className="section-label">{"Hello, I'm"}</p>
+              <SectionLabel>{"Hello, I'm"}</SectionLabel>
               <h1
                 className="text-2xl font-bold leading-tight"
                 style={{ color: "var(--primary)" }}
@@ -481,13 +295,13 @@ export default function HomePage() {
             )}
           </div>
           <div>
-            <p className="section-label mb-2">Toolbox</p>
+            <SectionLabel className="mb-2">Toolbox</SectionLabel>
             <ToolGrid />
           </div>
         </div>
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
           <div className="flex items-baseline gap-2 mb-3 flex-shrink-0">
-            <p className="section-label mb-0">Experience</p>
+            <SectionLabel noMargin>Experience</SectionLabel>
             <h2
               className="text-2xl font-bold"
               style={{ color: "var(--primary)" }}
@@ -521,7 +335,7 @@ export default function HomePage() {
               className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <p className="section-label">{"Hello, I'm"}</p>
+              <SectionLabel>{"Hello, I'm"}</SectionLabel>
               <h1
                 className="text-xl font-bold leading-tight"
                 style={{ color: "var(--primary)" }}
@@ -542,12 +356,12 @@ export default function HomePage() {
           >
             {BIO_TEXT}
           </p>
-          <p className="section-label mb-2">Toolbox</p>
+          <SectionLabel className="mb-2">Toolbox</SectionLabel>
           <ToolGridMobile />
         </section>
         <section className="flex flex-col flex-1 min-h-0">
           <div className="flex items-baseline gap-2 mb-3 flex-shrink-0">
-            <p className="section-label mb-0">Experience</p>
+            <SectionLabel noMargin>Experience</SectionLabel>
             <h2
               className="text-lg font-semibold"
               style={{ color: "var(--primary)" }}

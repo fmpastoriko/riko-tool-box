@@ -8,7 +8,7 @@ import MessageBubble, {
   markdownStyles,
 } from "@/components/chatbot/MessageBubble";
 import SessionList from "@/components/chatbot/SessionList";
-import UnauthenticatedBanner from "@/components/chatbot/UnauthenticatedBanner";
+import ToolOptionsPanel from "@/components/ToolOptionsPanel";
 import type {
   Message,
   ChatSession,
@@ -17,6 +17,12 @@ import type {
 } from "@/components/chatbot/types";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
+import UnauthenticatedBanner from "@/components/chatbot/UnauthenticatedBanner";
+import StatusBadge from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
+import ErrorText from "@/components/ErrorText";
+import MonoText from "@/components/MonoText";
+import Card from "@/components/Card";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
@@ -59,11 +65,11 @@ function ChatbotInner() {
   const abortRef = useRef<AbortController | null>(null);
   const initDoneRef = useRef(false);
 
-  const hasUnsavedMessages = !isAuthenticated && messages.length > 0;
+  const hasUnsavedMessages =
+    !isAuthenticated && messages.length > 0 && !activeSession;
   const sessionStarted = !!activeSession;
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
-
   const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/chatbot");
 
   useEffect(() => {
@@ -95,14 +101,14 @@ function ChatbotInner() {
 
   useEffect(() => {
     if (isLocal) {
-      fetch("/api/briefer/files")
+      fetch("/api/code-briefer/files")
         .then((r) => r.json())
         .then((d) => {
           if (d.repos) setRepos(d.repos);
         })
         .catch(() => {});
     }
-    fetch("/api/chat/models")
+    fetch("/api/chatbot/models")
       .then((r) => r.json())
       .then((d) => {
         if (d.models?.length > 0) setModels(d.models);
@@ -130,7 +136,7 @@ function ChatbotInner() {
   }, []);
 
   const loadSessions = useCallback(async () => {
-    const res = await fetch("/api/chat/sessions");
+    const res = await fetch("/api/chatbot/sessions");
     if (!res.ok) return [];
     const data = await res.json();
     setSessions(data.sessions ?? []);
@@ -139,7 +145,7 @@ function ChatbotInner() {
 
   const loadSession = useCallback(async (sessionId: string) => {
     setLoadingSession(true);
-    const res = await fetch(`/api/chat/sessions/${sessionId}`);
+    const res = await fetch(`/api/chatbot/sessions/${sessionId}`);
     if (!res.ok) {
       setLoadingSession(false);
       return;
@@ -180,17 +186,30 @@ function ChatbotInner() {
         await loadSessions();
         return;
       }
-      await loadSessions();
+      const loadedSessions = await loadSessions();
+      if (!isAuthenticated && loadedSessions.length > 0) {
+        const latestSession = loadedSessions[0];
+        router.replace(`/tools/chatbot?session=${latestSession.id}`);
+        await loadSession(latestSession.id);
+        return;
+      }
     }
     init();
-  }, [authStatus, loadSession, loadSessions, searchParams]);
+  }, [
+    authStatus,
+    loadSession,
+    loadSessions,
+    searchParams,
+    isAuthenticated,
+    router,
+  ]);
 
   async function createSession(
     firstMessage: string,
     rp: string | null,
     model: string,
   ): Promise<ChatSession | null> {
-    const res = await fetch("/api/chat/sessions", {
+    const res = await fetch("/api/chatbot/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -209,7 +228,7 @@ function ChatbotInner() {
     role: string,
     content: string,
   ): Promise<boolean> {
-    const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+    const res = await fetch(`/api/chatbot/sessions/${sessionId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, content }),
@@ -287,10 +306,8 @@ function ChatbotInner() {
       session = await createSession(text || "Image", repoPath, selectedModel);
       if (session) {
         setActiveSession(session);
-        if (isOwner) {
-          setSessions((prev) => [session!, ...prev]);
-          router.replace(`/tools/chatbot?session=${session.id}`);
-        }
+        setSessions((prev) => [session!, ...prev]);
+        router.replace(`/tools/chatbot?session=${session.id}`);
       }
     }
 
@@ -323,7 +340,7 @@ function ChatbotInner() {
     abortRef.current = controller;
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -399,7 +416,7 @@ function ChatbotInner() {
     setNoModelsAvailable(false);
     setUserScrolledUp(false);
     setSelectedModel("");
-    if (isOwner) router.replace("/tools/chatbot");
+    router.replace("/tools/chatbot");
     setMobileDrawerOpen(false);
   }
 
@@ -412,7 +429,7 @@ function ChatbotInner() {
 
   async function handleDeleteSession(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    await fetch(`/api/chat/sessions/${id}`, { method: "DELETE" });
+    await fetch(`/api/chatbot/sessions/${id}`, { method: "DELETE" });
     const updated = sessions.filter((s) => s.id !== id);
     setSessions(updated);
     if (activeSession?.id === id) {
@@ -467,15 +484,7 @@ function ChatbotInner() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {allModelsExhausted && (
-              <span
-                className="text-xs font-mono px-2 py-1 rounded"
-                style={{
-                  background: "rgba(239,68,68,0.1)",
-                  color: "rgb(239,68,68)",
-                }}
-              >
-                No models available
-              </span>
+              <StatusBadge variant="error">No models available</StatusBadge>
             )}
 
             {!sessionStarted && models.length > 0 && (
@@ -498,26 +507,10 @@ function ChatbotInner() {
             {sessionStarted && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 {repoLabel && (
-                  <span
-                    className="text-xs font-mono px-2 py-1 rounded"
-                    style={{
-                      background: "var(--accent-dim)",
-                      color: "var(--accent)",
-                    }}
-                  >
-                    {repoLabel}
-                  </span>
+                  <StatusBadge variant="accent">{repoLabel}</StatusBadge>
                 )}
                 {modelLabel && (
-                  <span
-                    className="text-xs font-mono px-2 py-1 rounded"
-                    style={{
-                      background: "var(--border)",
-                      color: "var(--secondary)",
-                    }}
-                  >
-                    {modelLabel}
-                  </span>
+                  <StatusBadge variant="border">{modelLabel}</StatusBadge>
                 )}
               </div>
             )}
@@ -563,14 +556,14 @@ function ChatbotInner() {
         )}
 
         <div className="flex-1 flex gap-4 min-h-0">
-          <div className="hidden sm:flex flex-col gap-1 flex-shrink-0 w-48 min-h-0">
+          <ToolOptionsPanel>
             <SessionList
               sessions={sessions}
               activeSession={activeSession}
               onSelect={handleSelectSession}
               onDelete={handleDeleteSession}
             />
-          </div>
+          </ToolOptionsPanel>
 
           {mobileDrawerOpen && (
             <div className="sm:hidden fixed inset-0 z-50 flex">
@@ -586,12 +579,7 @@ function ChatbotInner() {
                 }}
               >
                 <div className="flex items-center justify-between flex-shrink-0">
-                  <p
-                    className="text-xs font-mono"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Sessions
-                  </p>
+                  <MonoText color="muted">Sessions</MonoText>
                   <button
                     onClick={() => setMobileDrawerOpen(false)}
                     className="text-xs px-2 py-1 rounded"
@@ -609,12 +597,17 @@ function ChatbotInner() {
                 >
                   + New Chat
                 </button>
-                <SessionList
-                  sessions={sessions}
-                  activeSession={activeSession}
-                  onSelect={handleSelectSession}
-                  onDelete={handleDeleteSession}
-                />
+                <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
+                  <SessionList
+                    sessions={sessions}
+                    activeSession={activeSession}
+                    onSelect={(s) => {
+                      handleSelectSession(s);
+                      setMobileDrawerOpen(false);
+                    }}
+                    onDelete={handleDeleteSession}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -629,23 +622,14 @@ function ChatbotInner() {
               }}
             >
               {loadingSession ? (
-                <div className="h-full flex items-center justify-center">
-                  <p
-                    className="text-xs font-mono"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Loading…
-                  </p>
-                </div>
+                <EmptyState message="Loading…" />
               ) : messages.length === 0 ? (
-                <div className="h-full flex items-center justify-center">
-                  <p
-                    className="text-sm font-mono"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    {activeSession ? "No messages yet" : "Start a new chat…"}
-                  </p>
-                </div>
+                <EmptyState
+                  message={
+                    activeSession ? "No messages yet" : "Start a new chat…"
+                  }
+                  mono={false}
+                />
               ) : (
                 messages.map((m, i) => (
                   <MessageBubble key={i} message={m} repoPath={repoPath} />
@@ -655,21 +639,15 @@ function ChatbotInner() {
             </div>
 
             {limitReached && (
-              <p
-                className="text-xs font-mono text-center mb-2 flex-shrink-0"
-                style={{ color: "rgb(239,68,68)" }}
-              >
+              <ErrorText className="text-center mb-2 flex-shrink-0">
                 Message limit reached (100). Start a new chat.
-              </p>
+              </ErrorText>
             )}
             {noModelsAvailable && (
-              <p
-                className="text-xs font-mono text-center mb-2 flex-shrink-0"
-                style={{ color: "rgb(239,68,68)" }}
-              >
+              <ErrorText className="text-center mb-2 flex-shrink-0">
                 No models available. All quota exhausted, resets at{" "}
                 {process.env.NEXT_PUBLIC_WIB_RESET_HOUR ?? "8"} AM WIB.
-              </p>
+              </ErrorText>
             )}
 
             {pendingImage && (
@@ -690,13 +668,7 @@ function ChatbotInner() {
               </div>
             )}
 
-            <div
-              className="rounded-xl border flex items-end gap-2 p-2 flex-shrink-0"
-              style={{
-                borderColor: "var(--border)",
-                background: "var(--surface)",
-              }}
-            >
+            <Card className="flex items-center gap-2 p-2 flex-shrink-0">
               <input
                 ref={imageInputRef}
                 type="file"
@@ -744,14 +716,16 @@ function ChatbotInner() {
 
               <textarea
                 ref={textareaRef}
+                rows={1}
                 className="input-base flex-1 resize-none"
                 style={{
                   border: "none",
                   background: "transparent",
-                  minHeight: 40,
-                  maxHeight: 160,
+                  maxHeight: "50vh",
+                  overflowY: "auto",
+                  lineHeight: "1.5",
+                  padding: "6px 0",
                 }}
-                rows={1}
                 placeholder={
                   limitReached
                     ? "Limit reached; start a new chat"
@@ -760,7 +734,12 @@ function ChatbotInner() {
                       : "Type a message… (Enter to send, Shift+Enter for newline)"
                 }
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  const el = e.target;
+                  el.style.height = "auto";
+                  el.style.height = `${el.scrollHeight}px`;
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -802,7 +781,7 @@ function ChatbotInner() {
                   Send
                 </button>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       </div>

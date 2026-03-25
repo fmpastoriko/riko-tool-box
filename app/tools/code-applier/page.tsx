@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import JSZip from "jszip";
 import FileTreeBase from "@/components/FileTreeBase";
@@ -8,15 +7,27 @@ import PanelBox from "@/components/PanelBox";
 import { ALLOWED_WRITE_EXTS } from "@/config/fileExtensions";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
+import ToolOptionsPanel from "@/components/ToolOptionsPanel";
+import { formatDate } from "@/lib/formatDate";
+import Card from "@/components/Card";
+import SectionLabel from "@/components/SectionLabel";
+import EmptyState from "@/components/EmptyState";
+import ErrorText from "@/components/ErrorText";
+import MonoText from "@/components/MonoText";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
-
 const localOnlyReason =
   TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier")?.localOnlyReason ??
   "";
 
 type Repo = { label: string; path: string };
 type ZipEntry = { path: string; content: string; size: number };
+type BackupEntry = {
+  path: string;
+  backupPath: string;
+  timestamp: number;
+  source: "applier" | "chat";
+};
 type ApplyResult = {
   path: string;
   ok: boolean;
@@ -24,7 +35,25 @@ type ApplyResult = {
   error?: string;
 };
 
-export default function codeapplierPage() {
+function parsePastedText(text: string): ZipEntry[] {
+  const entries: ZipEntry[] = [];
+  const blockRegex = /^([^\n]+)\n```[^\n]*\n([\s\S]*?)```/gm;
+  let match;
+  while ((match = blockRegex.exec(text)) !== null) {
+    const rawName = match[1].trim();
+    const content = match[2];
+    const hasPathMarker = rawName.includes("!@#");
+    const cleanName = hasPathMarker ? rawName.replace(/!@#/g, "/") : rawName;
+    const derivedPath = hasPathMarker ? cleanName : rawName;
+    if (!derivedPath) continue;
+    const ext = "." + derivedPath.split(".").pop()!.toLowerCase();
+    if (!ALLOWED_WRITE_EXTS.has(ext)) continue;
+    entries.push({ path: derivedPath, content, size: content.length });
+  }
+  return entries;
+}
+
+export default function CodeApplierPage() {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
   const [zipEntries, setZipEntries] = useState<ZipEntry[]>([]);
@@ -32,18 +61,22 @@ export default function codeapplierPage() {
   const [results, setResults] = useState<ApplyResult[]>([]);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [reverting, setReverting] = useState(false);
+  const [backups, setBackups] = useState<BackupEntry[]>([]);
   const [loadingZip, setLoadingZip] = useState(false);
   const [zipName, setZipName] = useState("");
   const [pickedFilenames, setPickedFilenames] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const [pasteError, setPasteError] = useState("");
+  const [showTextInput, setShowTextInput] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
-
   const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier");
 
   useEffect(() => {
     if (!isLocal) return;
-    fetch("/api/briefer/files")
+    fetch("/api/code-briefer/files")
       .then((r) => r.json())
       .then((d) => {
         if (d.repos) setRepos(d.repos);
@@ -60,13 +93,16 @@ export default function codeapplierPage() {
     setSelected(new Set());
     setResults([]);
     setApplied(false);
-    setZipName(file.name);
-    setPickedFilenames([file.name]);
-
+    setReverting(false);
+    setBackups([]);
+    setZipName("");
+    setPickedFilenames([]);
+    setPasteText("");
+    setPasteError("");
+    setShowTextInput(false);
     try {
       const zip = await JSZip.loadAsync(file);
       const entries: ZipEntry[] = [];
-
       await Promise.all(
         Object.entries(zip.files).map(async ([rawPath, zipEntry]) => {
           if (zipEntry.dir) return;
@@ -86,7 +122,6 @@ export default function codeapplierPage() {
           } catch {}
         }),
       );
-
       entries.sort((a, b) => a.path.localeCompare(b.path));
       setZipEntries(entries);
       setSelected(new Set(entries.map((e) => e.path)));
@@ -108,9 +143,12 @@ export default function codeapplierPage() {
     setZipEntries([]);
     setSelected(new Set());
     setApplied(false);
-
+    setReverting(false);
+    setBackups([]);
+    setPasteText("");
+    setPasteError("");
+    setShowTextInput(false);
     const newEntries: ZipEntry[] = [];
-
     await Promise.all(
       files.map(async (file) => {
         const filename = file.name;
@@ -126,24 +164,40 @@ export default function codeapplierPage() {
         } catch {}
       }),
     );
-
     if (newEntries.length === 0) return;
-
     setZipEntries((prev) => {
       const map = new Map(prev.map((e) => [e.path, e]));
       for (const entry of newEntries) map.set(entry.path, entry);
-      const merged = Array.from(map.values()).sort((a, b) =>
+      return Array.from(map.values()).sort((a, b) =>
         a.path.localeCompare(b.path),
       );
-      return merged;
     });
     setSelected((prev) => {
       const next = new Set(prev);
       for (const entry of newEntries) next.add(entry.path);
       return next;
     });
-
     e.target.value = "";
+  }
+
+  function handleParsePaste() {
+    setPasteError("");
+    const entries = parsePastedText(pasteText);
+    if (entries.length === 0) {
+      setPasteError("No valid file blocks found.");
+      return;
+    }
+    setError("");
+    setResults([]);
+    setZipName("");
+    setPickedFilenames([]);
+    setApplied(false);
+    setReverting(false);
+    setBackups([]);
+    entries.sort((a, b) => a.path.localeCompare(b.path));
+    setZipEntries(entries);
+    setSelected(new Set(entries.map((e) => e.path)));
+    setShowTextInput(false);
   }
 
   function toggleFile(p: string) {
@@ -172,13 +226,13 @@ export default function codeapplierPage() {
     if (!selectedRepo || selected.size === 0 || applying) return;
     setApplying(true);
     setResults([]);
-
     const toApply = zipEntries.filter((e) => selected.has(e.path));
     const out: ApplyResult[] = [];
-
+    const newBackups: BackupEntry[] = [];
+    const now = Date.now();
     for (const entry of toApply) {
       try {
-        const res = await fetch("/api/applier", {
+        const res = await fetch("/api/code-applier/backup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -194,24 +248,29 @@ export default function codeapplierPage() {
           prettified: data.prettified,
           error: data.error,
         });
+        if (data.backupPath)
+          newBackups.push({
+            path: entry.path,
+            backupPath: data.backupPath,
+            timestamp: now,
+            source: "applier",
+          });
       } catch (err) {
         out.push({ path: entry.path, ok: false, error: String(err) });
       }
     }
-
     setResults(out);
+    setBackups((prev) => [...prev, ...newBackups]);
     setApplied(true);
-
     const allPrettified =
       out.length > 0 && out.every((r) => r.ok && r.prettified);
     if (allPrettified && pickedFilenames.length > 0) {
       try {
-        const res = await fetch("/api/applier/delete-zip", {
+        await fetch("/api/code-applier/delete-zip", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filenames: pickedFilenames }),
         });
-        const data = await res.json();
       } catch (e) {
         console.error("[delete-zip] fetch error:", e);
       }
@@ -219,9 +278,43 @@ export default function codeapplierPage() {
       setSelected(new Set());
       setZipName("");
       setPickedFilenames([]);
-    } else {
     }
+    setApplying(false);
+  }
 
+  async function handleRevert(backupEntries: BackupEntry[]) {
+    if (!selectedRepo || backupEntries.length === 0 || applying) return;
+    setApplying(true);
+    setReverting(true);
+    setResults([]);
+    const out: ApplyResult[] = [];
+    for (const backup of backupEntries) {
+      try {
+        const res = await fetch("/api/code-applier/revert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repoPath: selectedRepo.path,
+            filePath: backup.path,
+            backupPath: backup.backupPath,
+          }),
+        });
+        const data = await res.json();
+        out.push({
+          path: backup.path,
+          ok: !!data.ok,
+          prettified: data.prettified,
+          error: data.error,
+        });
+      } catch (err) {
+        out.push({ path: backup.path, ok: false, error: String(err) });
+      }
+    }
+    setResults(out);
+    const revertedPaths = new Set(backupEntries.map((b) => b.path));
+    setBackups((prev) => prev.filter((b) => !revertedPaths.has(b.path)));
+    setApplied(false);
+    setReverting(false);
     setApplying(false);
   }
 
@@ -229,9 +322,10 @@ export default function codeapplierPage() {
     path: e.path,
     size: e.size,
   }));
-
   const successCount = results.filter((r) => r.ok).length;
   const failCount = results.filter((r) => !r.ok).length;
+  const applierBackups = backups.filter((b) => b.source === "applier");
+  const chatBackups = backups.filter((b) => b.source === "chat");
 
   if (!isLocal) {
     return (
@@ -241,17 +335,14 @@ export default function codeapplierPage() {
           subtitle="Apply zip file contents directly to a local repo with auto-formatting."
           mediumUrl={toolConfig?.mediumUrl}
         />
-        <div
-          className="card"
+        <Card
           style={{
             borderColor: "rgba(239,68,68,0.4)",
             background: "rgba(239,68,68,0.04)",
           }}
         >
-          <p className="text-sm font-mono" style={{ color: "rgb(239,68,68)" }}>
-            {localOnlyReason}
-          </p>
-        </div>
+          <ErrorText>{localOnlyReason}</ErrorText>
+        </Card>
       </div>
     );
   }
@@ -265,21 +356,20 @@ export default function codeapplierPage() {
           mediumUrl={toolConfig?.mediumUrl}
         />
       </div>
-
       <div className="flex-1 flex gap-4 min-h-0">
-        <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
-          <div className="card space-y-2 flex-shrink-0">
-            <p className="section-label mb-0">Repository</p>
+        <ToolOptionsPanel>
+          <Card className="space-y-2 flex-shrink-0">
+            <SectionLabel noMargin>Repository</SectionLabel>
             <RepoSelector
               repos={repos}
               selectedPath={selectedRepo?.path ?? null}
               onChange={setSelectedRepo}
               storageKey="codeapplier_lastRepo"
             />
-          </div>
+          </Card>
 
-          <div className="card space-y-2 flex-shrink-0">
-            <p className="section-label mb-0">Files</p>
+          <Card className="space-y-2 flex-shrink-0">
+            <SectionLabel noMargin>File Picker</SectionLabel>
             <input
               ref={inputRef}
               type="file"
@@ -313,25 +403,52 @@ export default function codeapplierPage() {
               >
                 Pick Files
               </button>
+              <button
+                onClick={() => setShowTextInput((s) => !s)}
+                className="btn-ghost text-xs py-1.5 px-3 flex-1"
+              >
+                {showTextInput ? "Hide Input" : "Input text"}
+              </button>
             </div>
-            {error && (
-              <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
-                {error}
-              </p>
-            )}
-          </div>
+            {error && <ErrorText>{error}</ErrorText>}
+          </Card>
+
+          {showTextInput && (
+            <Card className="space-y-2 flex-shrink-0">
+              <div className="space-y-1.5">
+                <textarea
+                  className="w-full text-xs font-mono rounded border bg-transparent resize-none"
+                  style={{
+                    borderColor: "var(--border)",
+                    color: "var(--secondary)",
+                    padding: "6px 8px",
+                    minHeight: "80px",
+                    outline: "none",
+                  }}
+                  placeholder={`Paste output here…\n\nconfig!@#chat.ts\n\`\`\`typescript\n…\n\`\`\``}
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                />
+                <button
+                  onClick={handleParsePaste}
+                  className="btn-ghost text-xs py-1.5 px-3 w-full"
+                  disabled={!pasteText.trim()}
+                >
+                  Parse
+                </button>
+                {pasteError && <ErrorText>{pasteError}</ErrorText>}
+              </div>
+            </Card>
+          )}
 
           {zipEntries.length > 0 && (
-            <div className="card flex flex-col min-h-0 flex-1">
+            <Card className="flex flex-col min-h-0 flex-1">
               <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
-                <p className="section-label mb-0">Files</p>
+                <SectionLabel noMargin>Files</SectionLabel>
                 <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-xs font-mono"
-                    style={{ color: "var(--muted)" }}
-                  >
+                  <MonoText color="muted">
                     {selected.size}/{zipEntries.length}
-                  </span>
+                  </MonoText>
                   <button
                     onClick={() =>
                       selected.size === zipEntries.length
@@ -356,7 +473,7 @@ export default function codeapplierPage() {
                   onRenamePath={handleRenamePath}
                 />
               </div>
-            </div>
+            </Card>
           )}
 
           <button
@@ -374,9 +491,9 @@ export default function codeapplierPage() {
               ? "Applying…"
               : `Apply${selected.size > 0 ? ` (${selected.size})` : ""}`}
           </button>
-        </div>
+        </ToolOptionsPanel>
 
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-row min-h-0 gap-4">
           <PanelBox
             title="Results"
             headerRight={
@@ -401,14 +518,13 @@ export default function codeapplierPage() {
             }
           >
             {results.length === 0 ? (
-              <p
-                className="text-xs font-mono"
-                style={{ color: "var(--muted)" }}
-              >
-                {zipEntries.length === 0
-                  ? "Pick a zip file or files and a repo to get started…"
-                  : "Select files and click Apply…"}
-              </p>
+              <EmptyState
+                message={
+                  zipEntries.length === 0
+                    ? "Pick a zip file, files, or paste output and select a repo to get started…"
+                    : "Select files and click Apply…"
+                }
+              />
             ) : (
               <div className="flex-1 overflow-y-auto space-y-1 min-h-0">
                 {results.map((r, i) => (
@@ -435,7 +551,7 @@ export default function codeapplierPage() {
                         className="flex-shrink-0"
                         style={{ color: "var(--muted)" }}
                       >
-                        prettier ✓
+                        {reverting ? "Reverted" : "prettier ✓"}
                       </span>
                     )}
                     {r.error && (
@@ -451,6 +567,96 @@ export default function codeapplierPage() {
               </div>
             )}
           </PanelBox>
+
+          <Card className="space-y-3 flex-shrink-0" style={{ minWidth: 220 }}>
+            <SectionLabel noMargin>Revert Changes</SectionLabel>
+            {backups.length === 0 ? (
+              <MonoText color="muted">No changes to revert</MonoText>
+            ) : (
+              <>
+                {applierBackups.length > 0 && (
+                  <div className="space-y-1.5">
+                    <MonoText color="secondary">Via Applier</MonoText>
+                    <div className="space-y-1">
+                      {applierBackups.map((b, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-1.5 text-xs font-mono"
+                        >
+                          <span
+                            className="flex-1 truncate"
+                            style={{ color: "var(--secondary)" }}
+                          >
+                            {b.path.split("/").pop()}
+                          </span>
+                          <span
+                            className="flex-shrink-0"
+                            style={{ color: "var(--muted)", fontSize: 10 }}
+                          >
+                            {new Date(b.timestamp).toLocaleTimeString("en-GB", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handleRevert(applierBackups)}
+                      disabled={applying}
+                      className="btn-primary text-xs justify-center w-full"
+                      style={{ opacity: applying ? 0.6 : 1 }}
+                    >
+                      {applying
+                        ? "Reverting…"
+                        : `Revert All (${applierBackups.length})`}
+                    </button>
+                  </div>
+                )}
+                {chatBackups.length > 0 && (
+                  <div className="space-y-1.5">
+                    <MonoText color="secondary">
+                      Via Chat / Code Briefer
+                    </MonoText>
+                    <div className="space-y-1">
+                      {chatBackups.map((b, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-1.5 text-xs font-mono"
+                        >
+                          <span
+                            className="flex-1 truncate"
+                            style={{ color: "var(--secondary)" }}
+                          >
+                            {b.path.split("/").pop()}
+                          </span>
+                          <span
+                            className="flex-shrink-0"
+                            style={{ color: "var(--muted)", fontSize: 10 }}
+                          >
+                            {new Date(b.timestamp).toLocaleTimeString("en-GB", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handleRevert(chatBackups)}
+                      disabled={applying}
+                      className="btn-primary text-xs justify-center w-full"
+                      style={{ opacity: applying ? 0.6 : 1 }}
+                    >
+                      {applying
+                        ? "Reverting…"
+                        : `Revert All (${chatBackups.length})`}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
         </div>
       </div>
     </div>

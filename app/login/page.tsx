@@ -3,6 +3,7 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Card from "@/components/Card";
 
 export default function LoginPage() {
   const { status } = useSession();
@@ -24,7 +25,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="card w-full max-w-sm space-y-6 text-center">
+      <Card className="w-full max-w-sm space-y-6 text-center">
         <div>
           <p className="section-label">riko.toolbox</p>
           <h1
@@ -69,7 +70,7 @@ export default function LoginPage() {
         <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
           Access is restricted to authorised accounts only.
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

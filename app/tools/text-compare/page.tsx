@@ -3,10 +3,14 @@
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { diffLines, diffChars, type Change } from "diff";
-import Link from "next/link";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
 import PanelBox from "@/components/PanelBox";
+import HistoryButton from "@/components/HistoryButton";
+import Card from "@/components/Card";
+import SectionLabel from "@/components/SectionLabel";
+import MonoText from "@/components/MonoText";
+import EmptyState from "@/components/EmptyState";
 
 type Side = {
   text: string;
@@ -210,7 +214,7 @@ function DiffRow({ leftSide, rightSide }: { leftSide: Side; rightSide: Side }) {
 
 async function autoSave(textA: string, textB: string): Promise<string | null> {
   try {
-    const res = await fetch("/api/compare", {
+    const res = await fetch("/api/text-compare", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text_a: textA, text_b: textB }),
@@ -263,13 +267,13 @@ function TextCompareInner() {
   const diffHeaderRight = (
     <>
       {left && right && (
-        <div className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+        <MonoText color="muted">
           {savedId ? (
-            <span style={{ color: "rgb(34,197,94)" }}>✓ saved</span>
+            <span style={{ color: "rgb(34,197,94)" }}>saved</span>
           ) : (
-            <span>saving…</span>
+            <span>saving...</span>
           )}
-        </div>
+        </MonoText>
       )}
       {(["split", "unified"] as const).map((m) => (
         <button
@@ -296,12 +300,7 @@ function TextCompareInner() {
           subtitle="Myers diff; side-by-side with inline character highlighting."
           mediumUrl={toolConfig?.mediumUrl}
         />
-        <Link
-          href="/tools/text-compare/history"
-          className="btn-ghost text-xs py-1 px-3"
-        >
-          History ↗
-        </Link>
+        <HistoryButton href="/tools/text-compare/history" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-shrink-0">
@@ -321,20 +320,17 @@ function TextCompareInner() {
             },
           ] as const
         ).map(({ label, value, set, placeholder }) => (
-          <div key={label}>
-            <p
-              className="text-xs font-mono mb-1.5"
-              style={{ color: "var(--muted)" }}
-            >
+          <Card key={label}>
+            <MonoText color="muted" className="mb-1.5">
               {label}
-            </p>
+            </MonoText>
             <textarea
               className="input-base h-36"
               placeholder={placeholder}
               value={value}
               onChange={(e) => set(e.target.value)}
             />
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -400,10 +396,7 @@ function TextCompareInner() {
                       <div
                         key={`${ci}-${li}`}
                         className="flex items-baseline py-0.5 font-mono text-xs border-b"
-                        style={{
-                          background: bg,
-                          borderColor: "var(--border)",
-                        }}
+                        style={{ background: bg, borderColor: "var(--border)" }}
                       >
                         <span
                           className="select-none text-right w-9 flex-shrink-0 pr-2"
@@ -431,12 +424,10 @@ function TextCompareInner() {
               )}
             </div>
           ) : (
-            <div
-              className="flex-1 flex items-center justify-center text-sm"
-              style={{ color: "var(--muted)" }}
-            >
-              Paste text in both panels to see the diff
-            </div>
+            <EmptyState
+              message="Paste text in both panels to see the diff"
+              mono={false}
+            />
           )}
         </PanelBox>
       </div>

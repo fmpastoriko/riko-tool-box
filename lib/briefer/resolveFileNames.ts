@@ -1,5 +1,7 @@
 export function resolveFileNames(raw: string, allPaths: string[]): string[] {
-  const candidates = raw.match(/[\w.\-/]+/g) ?? [];
+  const candidates = (raw.match(/[\w.\-/]+/g) ?? []).filter(
+    (t) => t.includes("/") && /^[a-zA-Z0-9\-_./]+$/.test(t),
+  );
   const result: string[] = [];
   for (const rawToken of candidates) {
     const token = rawToken;

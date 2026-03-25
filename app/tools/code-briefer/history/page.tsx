@@ -1,6 +1,8 @@
 "use client";
 
 import HistoryPageLayout from "@/components/HistoryPageLayout";
+import StatusBadge from "@/components/StatusBadge";
+import MonoText from "@/components/MonoText";
 
 interface Session {
   id: string;
@@ -18,25 +20,17 @@ export default function CodeBrieferHistoryPage() {
       subtitle="All sessions are auto-saved."
       backHref="/tools/code-briefer"
       backLabel="← Code Briefer"
-      fetchUrl="/api/briefer/sessions"
+      fetchUrl="/api/code-briefer/sessions"
       dataKey="sessions"
       countLabel={(n) => `${n} session${n !== 1 ? "s" : ""}`}
       renderCardMeta={(s) => (
         <>
-          <span
-            className="font-mono text-xs"
-            style={{ color: "var(--accent)" }}
-          >
-            {s.prompt_label}
-          </span>
-          <span
-            className="text-xs font-mono ml-auto"
-            style={{ color: "var(--muted)" }}
-          >
+          <StatusBadge variant="accent">{s.prompt_label}</StatusBadge>
+          <MonoText color="muted" className="ml-auto">
             {typeof s.files_selected === "string"
               ? s.files_selected
               : `${s.files_selected.length} file(s)`}
-          </span>
+          </MonoText>
         </>
       )}
       renderExpanded={(s) =>
@@ -55,9 +49,7 @@ export default function CodeBrieferHistoryPage() {
             {s.text_output}
           </pre>
         ) : (
-          <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
-            No output saved for this session.
-          </p>
+          <MonoText color="muted">No output saved for this session.</MonoText>
         )
       }
     />

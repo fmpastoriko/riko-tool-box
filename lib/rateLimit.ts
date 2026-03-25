@@ -9,10 +9,18 @@ interface RateLimitEntry {
 const store = new Map<string, RateLimitEntry>();
 const WINDOW_MS = 60_000;
 
+function evictStale() {
+  const now = Date.now();
+  for (const [key, entry] of store) {
+    if (now > entry.resetAt) store.delete(key);
+  }
+}
+
 export function checkRateLimit(
   req: NextRequest,
   maxPerWindow: number,
 ): { allowed: boolean; remaining: number } {
+  evictStale();
   const ip = getIp(req);
   const now = Date.now();
   const entry = store.get(ip);

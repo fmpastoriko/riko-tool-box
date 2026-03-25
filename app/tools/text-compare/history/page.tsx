@@ -1,6 +1,7 @@
 "use client";
 
 import HistoryPageLayout from "@/components/HistoryPageLayout";
+import MonoText from "@/components/MonoText";
 
 interface Comparison {
   id: string;
@@ -41,35 +42,26 @@ export default function TextCompareHistoryPage() {
       subtitle="All comparisons are auto-saved."
       backHref="/tools/text-compare"
       backLabel="← Text Compare"
-      fetchUrl="/api/compare"
+      fetchUrl="/api/text-compare"
       dataKey="comparisons"
       countLabel={(n) => `${n} comparison${n !== 1 ? "s" : ""}`}
       renderCardMeta={(c) => (
-        <span
-          className="text-xs font-mono ml-auto"
-          style={{ color: "var(--muted)" }}
-        >
+        <MonoText color="muted" className="ml-auto">
           {c.text_a.split("\n").length} / {c.text_b.split("\n").length} lines
-        </span>
+        </MonoText>
       )}
       renderExpanded={(c) => (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p
-              className="text-xs font-mono mb-1"
-              style={{ color: "var(--muted)" }}
-            >
+            <MonoText color="muted" className="mb-1">
               First Text
-            </p>
+            </MonoText>
             <TextPreview text={c.text_a} />
           </div>
           <div>
-            <p
-              className="text-xs font-mono mb-1"
-              style={{ color: "var(--muted)" }}
-            >
+            <MonoText color="muted" className="mb-1">
               Second Text
-            </p>
+            </MonoText>
             <TextPreview text={c.text_b} />
           </div>
         </div>

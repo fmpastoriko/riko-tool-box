@@ -3,6 +3,9 @@
 import TimelineModal from "./timeline/TimelineModal";
 import { parseLinks } from "./timeline/parseLinks";
 import type { TimelineEntry } from "@/data/timeline";
+import Card from "@/components/Card";
+import SectionLabel from "@/components/SectionLabel";
+import Tag from "@/components/Tag";
 
 const TYPE_COLOR: Record<string, string> = {
   DA: "rgba(59,130,246,0.15)",
@@ -37,14 +40,14 @@ export default function TimelineCard({
       />
 
       <button onClick={onToggle} className="w-full text-left group mb-1">
-        <div
-          className="card transition-all duration-200 hover:border-[var(--accent)]"
+        <Card
           style={{ borderColor: "var(--border)" }}
+          className="transition-all duration-200 hover:border-[var(--accent)]"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <p className="section-label mb-0">{entry.year}</p>
+                <SectionLabel noMargin>{entry.year}</SectionLabel>
                 <span
                   className="text-xs font-mono px-2 py-0.5 rounded-full"
                   style={{
@@ -89,12 +92,10 @@ export default function TimelineCard({
           </div>
           <div className="flex flex-wrap gap-1.5 mt-3">
             {entry.tech.map((t) => (
-              <span key={t} className="tag">
-                {t}
-              </span>
+              <Tag key={t}>{t}</Tag>
             ))}
           </div>
-        </div>
+        </Card>
       </button>
 
       {open && <TimelineModal entry={entry} onClose={onToggle} />}

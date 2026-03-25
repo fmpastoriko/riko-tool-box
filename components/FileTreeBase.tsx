@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatSize } from "@/lib/fileUtils";
+import MonoText from "@/components/MonoText";
 
 type FileEntry = { path: string; size: number };
 
@@ -62,12 +63,9 @@ export default function FileTreeBase({
 
   if (files.length === 0) {
     return (
-      <div
-        className="text-xs font-mono py-4 text-center"
-        style={{ color: "var(--muted)" }}
-      >
+      <MonoText color="muted" className="py-4 text-center">
         No files match current filters
-      </div>
+      </MonoText>
     );
   }
 
@@ -214,7 +212,6 @@ export default function FileTreeBase({
                         🔒
                       </span>
                     )}
-
                     {!isEditing && (
                       <span
                         className="flex-shrink-0"

@@ -48,10 +48,11 @@ export function encryptIfOwner(
   return isOwner ? encrypt(value) : value;
 }
 
-export function decryptIfOwner(
-  value: string | null | undefined,
-  isOwner: boolean,
-): string | null {
-  if (value == null) return null;
-  return isOwner ? decrypt(value) : value;
+export function safeDecrypt(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    return decrypt(value);
+  } catch {
+    return value;
+  }
 }

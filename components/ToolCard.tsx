@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Card from "@/components/Card";
+import Tag from "@/components/Tag";
 
 interface ToolCardProps {
   href: string;
@@ -18,8 +20,8 @@ export default function ToolCard({
   mediumUrl,
 }: ToolCardProps) {
   return (
-    <div
-      className="card group flex flex-col gap-3 transition-all duration-200"
+    <Card
+      className="group flex flex-col gap-3 transition-all duration-200"
       style={{ borderColor: "var(--border)" }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -74,11 +76,9 @@ export default function ToolCard({
       </Link>
       <div className="flex flex-wrap gap-1.5 pt-1">
         {demonstrates.map((d) => (
-          <span key={d} className="tag">
-            {d}
-          </span>
+          <Tag key={d}>{d}</Tag>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

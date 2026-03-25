@@ -24,16 +24,14 @@ export default function SessionList({
         <button
           key={s.id}
           onClick={() => onSelect(s)}
-          className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all group flex items-start justify-between gap-1 flex-shrink-0"
+          className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all group flex items-center justify-between gap-1 flex-shrink-0 font-mono"
           style={{
-            background:
-              activeSession?.id === s.id ? "var(--accent-dim)" : "transparent",
+            background: activeSession?.id === s.id ? "var(--accent-dim)" : "transparent",
             border: `1px solid ${activeSession?.id === s.id ? "var(--accent)" : "var(--border)"}`,
-            color:
-              activeSession?.id === s.id ? "var(--accent)" : "var(--secondary)",
+            color: activeSession?.id === s.id ? "var(--accent)" : "var(--muted)",
           }}
         >
-          <span className="flex-1 truncate font-mono">{s.title}</span>
+          <span className="truncate flex-1">{s.title}</span>
           <span
             onClick={(e) => onDelete(e, s.id)}
             className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity"

@@ -78,17 +78,21 @@ Owner is determined by matching the Google account email against `OWNER_EMAIL`. 
 
 ## 3. Site Structure & Routing
 
-| Route                       | Page                 | Auth                               |
-| --------------------------- | -------------------- | ---------------------------------- |
-| /                           | Homepage             | None                               |
-| /login                      | Google sign-in       | None                               |
-| /tools                      | Tool Directory       | None                               |
-| /tools/text-compare         | Text Compare         | None                               |
-| /tools/text-compare/history | Text Compare History | Owner only                         |
-| /tools/code-briefer         | Code Briefer         | None                               |
-| /tools/code-briefer/history | Code Briefer History | Owner only                         |
-| /tools/chatbot              | Chatbot              | None (unauthenticated = IP-scoped) |
-| /tools/code-applier         | Code Applier         | None (local mode only)             |
+| Route                            | Page                      | Auth                               |
+| -------------------------------- | ------------------------- | ---------------------------------- |
+| /                                | Homepage                  | None                               |
+| /login                           | Google sign-in            | None                               |
+| /tools                           | Tool Directory            | None                               |
+| /tools/text-compare              | Text Compare              | None                               |
+| /tools/text-compare/history      | Text Compare History      | Owner only                         |
+| /tools/code-briefer              | Code Briefer              | None                               |
+| /tools/code-briefer/history      | Code Briefer History      | Owner only                         |
+| /tools/chatbot                   | Chatbot                   | None (unauthenticated = IP-scoped) |
+| /tools/code-applier              | Code Applier              | None (local mode only)             |
+| /tools/arithmetic-puzzle         | Arithmetic Puzzle         | None                               |
+| /tools/arithmetic-puzzle/history | Arithmetic Puzzle History | Owner only                         |
+| /tools/word-search               | Word Search               | None                               |
+| /tools/word-search/history       | Word Search History       | Owner only                         |
 
 ---
 
@@ -172,15 +176,6 @@ Owner data is encrypted at rest. Raw IPs are never stored, SHA-256 hash used as 
 
 \*Encrypted for owner. `context_outputs` auto-purged beyond 100 sessions.
 
-#### Extension filter defaults
-
-| Group        | Extensions                                   |
-| ------------ | -------------------------------------------- |
-| Python       | `.py`                                        |
-| React / Node | `.tsx`, `.ts`, `.jsx`, `.js`, `.mjs`         |
-| Vue          | `.vue`                                       |
-| Shared       | `.css`, `.sql`, `.json`, `.md`, `.gitignore` |
-
 ---
 
 ### 5.3 Chatbot
@@ -237,9 +232,93 @@ Owner data is encrypted at rest. Raw IPs are never stored, SHA-256 hash used as 
 
 ---
 
-### 5.5 (Planned)
+### 5.5 Arithmetic Puzzle Generator
 
-JSON Table Viewer, Arithmetic Puzzle Generator, Word Search Generator, AI Crossword (Bahasa Indonesia), Hololive Analytics Dashboard.
+| Attribute    | Detail                                                                          |
+| ------------ | ------------------------------------------------------------------------------- |
+| Purpose      | Generate printable arithmetic crossword puzzles with branching equation chains  |
+| Generation   | Pure client-side; no AI needed                                                  |
+| Structure    | DAG (branching equation tree); each node can spawn horizontal + vertical chains |
+| Grid         | Every cell is a number, operator, `=`, or empty; all occupy individual cells    |
+| Hidden cells | Mix of hidden numbers and operators; `=` signs always visible                   |
+| Difficulty   | Easy ~30% hidden, Medium ~50%, Hard ~70%                                        |
+| Solvability  | Unique solution guaranteed via constraint propagation check after each hide     |
+| PDF          | pdfkit server-side; A4, grid lines shown, answer key on page 2                  |
+| History      | Full puzzle JSON saved; re-downloadable from history page                       |
+
+#### Options
+
+| Option              | Range / Values                |
+| ------------------- | ----------------------------- |
+| Operators           | +, -, ×, ÷ (multi-select)     |
+| Number range        | Min / Max integer             |
+| Allow negatives     | Toggle                        |
+| Chain depth         | 1–5 levels                    |
+| Difficulty          | Easy / Medium / Hard          |
+| Puzzles to generate | 1–20                          |
+| PDFs to download    | 1–N (up to puzzles generated) |
+
+#### API Routes
+
+| Route                               | Method | Auth  | Description                   |
+| ----------------------------------- | ------ | ----- | ----------------------------- |
+| /api/arithmetic-puzzle/sessions     | GET    | None  | List sessions (IP-scoped)     |
+| /api/arithmetic-puzzle/sessions     | POST   | None  | Save session                  |
+| /api/arithmetic-puzzle/sessions/:id | GET    | None  | Get single session            |
+| /api/arithmetic-puzzle/sessions/:id | DELETE | Owner | Delete session                |
+| /api/arithmetic-puzzle/pdf          | POST   | None  | Generate PDF from puzzle data |
+
+#### Database Schema
+
+| Table                      | Key Columns                                                           |
+| -------------------------- | --------------------------------------------------------------------- |
+| arithmetic_puzzle_sessions | id (uuid), options_json, puzzles_json, hashed_ip, user_id, created_at |
+
+---
+
+### 5.6 Word Search Generator
+
+| Attribute | Detail                                                                         |
+| --------- | ------------------------------------------------------------------------------ |
+| Purpose   | Generate printable Indonesian word search puzzles by topic                     |
+| Words     | AI-generated via Groq (llama-3.3-70b-versatile), prompted for Bahasa Indonesia |
+| Placement | Backtracking algorithm; H + V + diagonal (↘); zero overlap guaranteed          |
+| Fill      | Remaining cells filled with random uppercase letters                           |
+| PDF       | pdfkit server-side; A4, no grid lines, word list below, answer key on page 2   |
+| History   | Full puzzle JSON saved; re-downloadable from history page                      |
+
+#### Options
+
+| Option              | Range / Values                |
+| ------------------- | ----------------------------- |
+| Topic               | Free text (Bahasa Indonesia)  |
+| Number of words     | 3–25                          |
+| Grid size           | 10×10 to 20×20                |
+| Puzzles to generate | 1–10                          |
+| PDFs to download    | 1–N (up to puzzles generated) |
+
+#### API Routes
+
+| Route                         | Method | Auth  | Description                   |
+| ----------------------------- | ------ | ----- | ----------------------------- |
+| /api/word-search/generate     | POST   | None  | Generate words via Groq       |
+| /api/word-search/sessions     | GET    | None  | List sessions (IP-scoped)     |
+| /api/word-search/sessions     | POST   | None  | Save session                  |
+| /api/word-search/sessions/:id | GET    | None  | Get single session            |
+| /api/word-search/sessions/:id | DELETE | Owner | Delete session                |
+| /api/word-search/pdf          | POST   | None  | Generate PDF from puzzle data |
+
+#### Database Schema
+
+| Table                | Key Columns                                                                  |
+| -------------------- | ---------------------------------------------------------------------------- |
+| word_search_sessions | id (uuid), topic, options_json, puzzles_json, hashed_ip, user_id, created_at |
+
+---
+
+### 5.7 (Planned) AI Crossword — Bahasa Indonesia
+
+See `README-crossword.md` for full design notes.
 
 ---
 
@@ -264,11 +343,16 @@ npm install
 
 Run `scripts/setup-db.sql` in the Neon SQL editor.
 
+The arithmetic puzzle and word search tables are created automatically on first use via `CREATE TABLE IF NOT EXISTS` in their respective API routes. No manual SQL needed for those.
+
 ### 3. Environment variables
 
 Create a `.env.local` file:
 
 ```env
+PORT=
+PDFKIT_FONT_DIR=path/to/riko-tool-box/node_modules/pdfkit/js/data
+
 # Database
 NEON_DATABASE_URL=postgresql://...
 
@@ -288,12 +372,15 @@ GOOGLE_CLIENT_SECRET=
 # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ENCRYPTION_KEY=
 
-# Gemini API keys (add more as _2, _3, etc.)
+# Gemini API keys
 OWNER_GEMINI_API_KEY_1=
 
-# Groq API keys (add more as _2, _3, etc.)
+# Groq API keys
 OWNER_GROQ_API_KEY_1=
 GROQ_API_KEY_PUBLIC=
+
+# GLM API keys
+OWNER_GLM_API_KEY_1=
 
 # Local mode (enables repo dropdown, Apply Changes in Code Briefer, and Code Applier)
 NEXT_PUBLIC_LOCAL=true
@@ -304,6 +391,7 @@ NEXT_PUBLIC_LOCAL=true
 # NEXT_PUBLIC_LLM_CHAIN_THRESHOLD=3000
 # WIB_RESET_HOUR=8
 # NEXT_PUBLIC_WIB_RESET_HOUR=8
+
 ```
 
 ### 4. Google OAuth setup
@@ -346,10 +434,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | Security hardening                      | Complete |
 | Gemini + multi-key LLM chain            | Complete |
 | Code Applier                            | Complete |
+| Arithmetic Puzzle Generator             | Complete |
+| Word Search Generator                   | Complete |
 | Code Briefer (hosted mode, file upload) | Planned  |
 | JSON Table Viewer                       | Planned  |
-| Arithmetic Puzzle Generator             | Planned  |
-| Word Search Generator                   | Planned  |
 | AI Crossword (Bahasa Indonesia)         | Planned  |
 | Homepage + Timeline polish              | Planned  |
 | Hololive Analytics Dashboard            | Planned  |

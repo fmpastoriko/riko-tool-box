@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
   repo_path   TEXT,
   model       TEXT,
   user_id     TEXT,
+  hashed_ip   TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -5,8 +5,8 @@ export function getIp(req: NextRequest): string {
   if (realIp) return sanitizeIp(realIp);
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
-    const last = forwarded.split(",").at(-1)?.trim();
-    if (last) return sanitizeIp(last);
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return sanitizeIp(first);
   }
   return "unknown";
 }

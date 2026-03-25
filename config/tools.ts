@@ -1,8 +1,10 @@
-export type ToolIcon =
+export type ToolIconName =
   | "chatbot"
   | "codebriefer"
   | "textcompare"
   | "codeapplier"
+  | "arithmeticpuzzle"
+  | "wordsearch"
   | "comingsoon";
 
 export interface ToolConfig {
@@ -14,7 +16,8 @@ export interface ToolConfig {
   localOnly?: boolean;
   localOnlyReason?: string;
   highlight?: boolean;
-  icon: ToolIcon;
+  hasHistory?: boolean;
+  icon: ToolIconName;
 }
 
 export const TOOLS_CONFIG: ToolConfig[] = [
@@ -41,6 +44,18 @@ export const TOOLS_CONFIG: ToolConfig[] = [
       "https://medium.com/@fransiskuspastoriko/i-built-an-ai-toolbox-to-reduce-my-claude-usage-835c73bd7676",
   },
   {
+    href: "/tools/code-applier",
+    label: "Code Applier",
+    icon: "codeapplier",
+    highlight: true,
+    localOnly: true,
+    localOnlyReason:
+      "Unavailable for the Vercel version because the whole purpose of this tool is to write directly to local files. This is quite risky to host. Kindly clone the repo if you want this feature.",
+    description:
+      "Upload a zip, pick which files to apply, and write them directly into a local repo. Runs Prettier automatically after writing. Disabled for the Vercel version because it writes to your local files — clone the repo for this one.",
+    demonstrates: ["File writes", "Prettier", "Local only"],
+  },
+  {
     href: "/tools/text-compare",
     label: "Text Compare",
     icon: "textcompare",
@@ -52,16 +67,24 @@ export const TOOLS_CONFIG: ToolConfig[] = [
       "https://medium.com/@fransiskuspastoriko/i-built-my-own-text-diff-tool-because-i-dont-trust-the-internet-with-my-data-4f28c4d0474c",
   },
   {
-    href: "/tools/code-applier",
-    label: "Code Applier",
-    icon: "codeapplier",
+    href: "/tools/arithmetic-puzzle",
+    label: "Arithmetic Puzzle",
+    icon: "arithmeticpuzzle",
     highlight: true,
-    localOnly: true,
-    localOnlyReason:
-      "Unavailable for the Vercel version because the whole purpose of this tool is to write directly to local files. This is quite risky to host. Kindly clone the repo if you want this feature.",
+    hasHistory: true,
     description:
-      "Upload a zip, pick which files to apply, and write them directly into a local repo. Runs Prettier automatically after writing. Disabled for the Vercel version because it writes to your local files — clone the repo for this one.",
-    demonstrates: ["File writes", "Prettier", "Local only"],
+      "Generate printable arithmetic crossword puzzles with branching equation chains. Configure operators, number range, difficulty, and chain depth. Download as PDF with answer key.",
+    demonstrates: ["Puzzle generation", "PDFKit", "DB"],
+  },
+  {
+    href: "/tools/word-search",
+    label: "Word Search",
+    icon: "wordsearch",
+    highlight: true,
+    hasHistory: true,
+    description:
+      "Generate printable Indonesian word search puzzles by topic. AI generates contextually relevant words via Groq, placed on a grid with backtracking. Download as PDF with answer key.",
+    demonstrates: ["Groq AI", "Backtracking", "PDFKit", "DB"],
   },
 ];
 

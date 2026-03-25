@@ -2,6 +2,7 @@
 
 interface PanelBoxProps {
   title: string;
+  className?: string;
   headerRight?: React.ReactNode;
   children: React.ReactNode;
 }

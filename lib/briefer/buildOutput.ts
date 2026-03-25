@@ -1,47 +1,61 @@
 import { summarizeFile } from "@/lib/summarize";
+import { buildWarningsBlock } from "@/lib/briefer/llmPrompts";
 
-export const FOOTER_APPEND = `
-DO NOT ADD ANY COMMENTS.
+const FOOTER_APPEND =
+  "DO NOT ADD ANY COMMENTS.\n\n" +
+  "IF THIS FILE IS A SUMMARY ONLY, ASK FOR COMPLETE CODES IF YOU NEED THEM.\n\n" +
+  "THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH. " +
+  'Example: app/tools/Page.tsx become "app!@#tools!@#page"\n\n' +
+  "THIS IS A MUST: Output your code as files, not as text. I expect downloadable files like .ts, .tsx, .vue, etc.\n\n" +
+  "THIS IS A MUST: Output how many tokens this message uses.\n\n" +
+  "THIS IS A MUST: Output how many tokens your output uses.\n\n" +
+  "THIS IS A MUST: EVERY FILE MUST BE NAMED USING ITS FULL PATH. NO BEING LAZY\n\n" +
+  'THIS IS A MUST: DON\'T START CODING UNLESS I SAY "Start Coding"\n\n' +
+  "THIS IS A MUST: Before doing anything, explain your plan first and ask for my permission and input.\n\n" +
+  'THIS IS A MUST: Only start coding when I specifically reply with "Start Coding". ' +
+  'This is strict, but case insensitive. Others like "Go", "Start", etc is not valid.\n\n' +
+  "Return only code, no explanation unless asked.\n\n" +
+  "Preserve existing code style and conventions.\n\n" +
+  "Do not add placeholder comments like // TODO or // implement this.\n\n" +
+  "If you need to tell me something, tell me through chat, not through comment.\n\n" +
+  "If you are in doubt, always ask me first, do not assume.\n\n" +
+  "Do not make up non-existent problems for the sake of feedback. If the code is good enough, say so.\n\n" +
+  "Always keep in mind the security, efficiency/performance, and cost (money) of the changes you make.\n\n" +
+  "SERIOUSLY, DO NOT USE M-DASH.";
 
-THIS IS A MUST: To avoid ambiguity, if you create files, NAME THE FILES WITH THEIR PATH. Example: app/tools/Page.tsx become "app!@#tools!@#page"
+const FOOTER_DEFAULT =
+  'THIS IS A MUST: DON\'T START CODING UNLESS I SAY "Start Coding"';
 
-THIS IS A MUST: EVERY FILE MUST BE NAMED USING ITS FULL PATH. NO BEING LAZY
+export const DEFAULT_PROMPT = "This is the code";
 
-THIS IS A MUST: DON'T START CODING UNLESS I SAY "Start Coding"
+export const DEFAULT_PROMPT_2 =
+  "This is either the summary of codebase or the complete codebase. " +
+  "IF THIS IS THE SUMMARY, tell me which files you need the full version to do the following task";
 
-THIS IS A MUST: Before doing anything, explain your plan first and ask for my permission and input.
-
-THIS IS A MUST: I repeat it again because it's IMPORTANT. Only start coding when I specifically reply with "Start Coding". This is strict, but case insensitive. Others like "Go", "Start", etc is not valid.
-
-Return only code, no explanation unless asked.
-
-Preserve existing code style and conventions.
-
-Do not add placeholder comments like // TODO or // implement this.
-
-If you need to tell me something, tell me through chat, not through comment.
-
-If you are in doubt, always ask me first, do not assume.
-
-Do not make up non-existent problems for the sake of feedback. If the code is good enough, say so.
-
-SERIOUSLY, DO NOT USE M-DASH.`.trim();
-
-export const DEFAULT_PROMPT =
-  "This is either the summary of codebase or the complete codebase. IF THIS IS THE SUMMARY, tell me which files you need the full version to do the following task";
-
-export const DEFAULT_PROMPT_2 = "This is the code";
+export type ContextMode = "off" | "names" | "semi" | "full";
 
 export function buildOutput(
   prompt: string,
   additionalPrompt: string,
   files: { path: string; content: string }[],
-  footer: string,
+  footerMode: "full" | "none" | "default2" | "change",
   fullContextFiles: Set<string>,
+  contextMode: ContextMode = "full",
 ): string {
   const parts: string[] = [];
-  parts.push(footer);
-  parts.push("");
+
+  if (footerMode === "full") {
+    parts.push(FOOTER_APPEND);
+    parts.push("");
+  } else if (footerMode === "change") {
+    parts.push(FOOTER_APPEND);
+    parts.push("");
+    parts.push(buildWarningsBlock());
+    parts.push("");
+  } else if (footerMode === "default2") {
+    parts.push(FOOTER_DEFAULT);
+    parts.push("");
+  }
 
   const fullPrompt = additionalPrompt.trim()
     ? `${prompt}\n${additionalPrompt.trim()}`
@@ -57,9 +71,16 @@ export function buildOutput(
 
   for (const f of files) {
     parts.push(`# FILE: ${f.path}`);
-    const body = fullContextFiles.has(f.path)
-      ? f.content
-      : summarizeFile(f.path, f.content);
+    let body: string;
+    if (fullContextFiles.has(f.path) || contextMode === "full") {
+      body = f.content;
+    } else if (contextMode === "off") {
+      body = summarizeFile(f.path, f.content, "names");
+    } else if (contextMode === "names") {
+      body = summarizeFile(f.path, f.content, "names");
+    } else {
+      body = summarizeFile(f.path, f.content, "semi");
+    }
     parts.push(body);
     parts.push("");
     parts.push(

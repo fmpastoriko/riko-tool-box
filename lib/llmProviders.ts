@@ -1,4 +1,4 @@
-export type Provider = "gemini" | "groq";
+export type Provider = "gemini" | "groq" | "glm";
 
 export interface ModelConfig {
   model: string;
@@ -12,6 +12,11 @@ export const CHAIN_THRESHOLD_TOKENS = Number(
 
 export const PROVIDER_CHAIN: ModelConfig[] = [
   {
+    model: "glm-4.7",
+    provider: "glm",
+    envPrefix: "OWNER_GLM_API_KEY",
+  },
+  {
     model: "gemini-2.5-flash",
     provider: "gemini",
     envPrefix: "OWNER_GEMINI_API_KEY",
@@ -20,6 +25,11 @@ export const PROVIDER_CHAIN: ModelConfig[] = [
     model: "gemini-3-flash",
     provider: "gemini",
     envPrefix: "OWNER_GEMINI_API_KEY",
+  },
+  {
+    model: "glm-4.7-flash",
+    provider: "glm",
+    envPrefix: "OWNER_GLM_API_KEY",
   },
   {
     model: "gemini-2.5-flash-lite",
@@ -45,6 +55,11 @@ export const PROVIDER_CHAIN: ModelConfig[] = [
 
 export const CHAIN_UNDER_THRESHOLD: ModelConfig[] = [
   {
+    model: "glm-4.7-flash",
+    provider: "glm",
+    envPrefix: "OWNER_GLM_API_KEY",
+  },
+  {
     model: "llama-3.3-70b-versatile",
     provider: "groq",
     envPrefix: "OWNER_GROQ_API_KEY",
@@ -68,6 +83,11 @@ export const CHAIN_UNDER_THRESHOLD: ModelConfig[] = [
 
 export const CHAIN_OVER_THRESHOLD: ModelConfig[] = [
   {
+    model: "glm-4.7",
+    provider: "glm",
+    envPrefix: "OWNER_GLM_API_KEY",
+  },
+  {
     model: "gemini-2.5-flash",
     provider: "gemini",
     envPrefix: "OWNER_GEMINI_API_KEY",
@@ -76,6 +96,11 @@ export const CHAIN_OVER_THRESHOLD: ModelConfig[] = [
     model: "gemini-3-flash",
     provider: "gemini",
     envPrefix: "OWNER_GEMINI_API_KEY",
+  },
+  {
+    model: "glm-4.7-flash",
+    provider: "glm",
+    envPrefix: "OWNER_GLM_API_KEY",
   },
   {
     model: "gemini-2.5-flash-lite",

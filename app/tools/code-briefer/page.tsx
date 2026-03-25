@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
 import FileTreeBase from "@/components/FileTreeBase";
 import RepoSelector from "@/components/briefer/RepoSelector";
-import LlmSuggestionPanel from "@/components/briefer/LlmSuggestionPanel";
+import LlmSuggestionPanel from "@/components/LlmSuggestionPanel";
 import OutputPanel from "@/components/briefer/OutputPanel";
+import HistoryButton from "@/components/HistoryButton";
 import { summarizeFile } from "@/lib/summarize";
 import { parseSuggestion } from "@/lib/parseSuggestion";
 import { estimateTokens } from "@/lib/fileUtils";
 import {
   buildOutput,
-  FOOTER_APPEND,
   DEFAULT_PROMPT,
   DEFAULT_PROMPT_2,
+  type ContextMode,
 } from "@/lib/briefer/buildOutput";
 import { parseGitignore, isIgnored } from "@/lib/briefer/gitignore";
 import { resolveFileNames } from "@/lib/briefer/resolveFileNames";
@@ -27,19 +27,39 @@ import {
   DRAFT_KEY,
 } from "@/lib/briefer/draft";
 import {
-  isAnalyticalPrompt,
   buildAnalyticalSystemPrompt,
   buildChangeSystemPrompt,
+  buildOtherSystemPrompt,
 } from "@/lib/briefer/llmPrompts";
 import { LLM_TOKEN_LIMIT } from "@/config/llm";
 import type { ModelInfo } from "@/components/chatbot/types";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
+import Card from "@/components/Card";
+import SectionLabel from "@/components/SectionLabel";
+import TagButton from "@/components/TagButton";
+import StatusBadge from "@/components/StatusBadge";
+import MonoText from "@/components/MonoText";
+import ErrorText from "@/components/ErrorText";
 
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
 type FileEntry = { path: string; size: number };
-type Template = { id: string; label: string; body: string; used_count: number };
+type Template = {
+  id: string;
+  label: string;
+  body: string;
+  used_count: number;
+  type: "analytical" | "change" | null;
+};
+
+const CONTEXT_MODE_CYCLE: ContextMode[] = ["off", "names", "semi", "full"];
+const CONTEXT_MODE_LABELS: Record<ContextMode, string> = {
+  off: "Context Off",
+  names: "Names Only",
+  semi: "Semi Context",
+  full: "Full Context",
+};
 
 export default function CodeBrieferPage() {
   const [isMobile, setIsMobile] = useState(false);
@@ -106,7 +126,7 @@ export default function CodeBrieferPage() {
   const [llmSuggestion, setLlmSuggestion] = useState("");
   const [llmSkippedReason, setLlmSkippedReason] = useState("");
   const [llmEnabled, setLlmEnabled] = useState(true);
-  const [fullContext, setFullContext] = useState(true);
+  const [contextMode, setContextMode] = useState<ContextMode>("full");
   const [llmStreaming, setLlmStreaming] = useState(false);
   const [llmCopied, setLlmCopied] = useState(false);
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
@@ -118,12 +138,11 @@ export default function CodeBrieferPage() {
   const [modelUsed, setModelUsed] = useState<string>("");
   const [applying, setApplying] = useState(false);
   const [applyResults, setApplyResults] = useState<
-    { file: string; ok: boolean; prettified?: boolean; error?: string }[]
+    { file: string; ok: boolean; prettified?: boolean; error: string }[]
   >([]);
 
   const draftRestoredRef = useRef(false);
   const selectedRepoRef = useRef<{ label: string; path: string } | null>(null);
-
   const [fileSearchTerm, setFileSearchTerm] = useState("");
 
   const activeExts = useMemo(() => {
@@ -155,7 +174,7 @@ export default function CodeBrieferPage() {
     displayedFiles.every((f) => selectedFiles.has(f.path));
 
   useEffect(() => {
-    fetch("/api/chat/models")
+    fetch("/api/chatbot/models")
       .then((r) => r.json())
       .then((d) => {
         if (d.models?.length > 0) setModels(d.models);
@@ -165,7 +184,7 @@ export default function CodeBrieferPage() {
 
   useEffect(() => {
     if (isLocal) {
-      fetch("/api/briefer/files")
+      fetch("/api/code-briefer/files")
         .then((r) => r.json())
         .then((d) => {
           if (d.repos) {
@@ -180,8 +199,8 @@ export default function CodeBrieferPage() {
                 setFileNamesHint(draft.fileNamesHint as string);
               if (draft.llmEnabled !== undefined)
                 setLlmEnabled(draft.llmEnabled as boolean);
-              if (draft.fullContext !== undefined)
-                setFullContext(draft.fullContext as boolean);
+              if (draft.contextMode !== undefined)
+                setContextMode(draft.contextMode as ContextMode);
               if (draft.customExts !== undefined)
                 setCustomExts(draft.customExts as string);
               if (draft.enabledExts)
@@ -216,8 +235,7 @@ export default function CodeBrieferPage() {
     } else {
       draftRestoredRef.current = true;
     }
-
-    fetch("/api/briefer/templates")
+    fetch("/api/code-briefer/templates")
       .then((r) => r.json())
       .then((d) => {
         if (d.templates) setTemplates(d.templates);
@@ -242,7 +260,7 @@ export default function CodeBrieferPage() {
       additionalPrompt,
       fileNamesHint,
       llmEnabled,
-      fullContext,
+      contextMode,
       customExts,
       enabledExts: Array.from(enabledExts),
       selectedTemplates: Array.from(selectedTemplates),
@@ -254,7 +272,7 @@ export default function CodeBrieferPage() {
     additionalPrompt,
     fileNamesHint,
     llmEnabled,
-    fullContext,
+    contextMode,
     customExts,
     enabledExts,
     selectedTemplates,
@@ -271,7 +289,7 @@ export default function CodeBrieferPage() {
     const repo = selectedRepoRef.current;
     setLoadingFiles(true);
     setRepoError("");
-    fetch("/api/briefer/files", {
+    fetch("/api/code-briefer/files", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -308,7 +326,7 @@ export default function CodeBrieferPage() {
       localStorage.setItem(LAST_REPO_KEY, repo.path);
     } catch {}
     try {
-      const res = await fetch("/api/briefer/files", {
+      const res = await fetch("/api/code-briefer/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -352,11 +370,9 @@ export default function CodeBrieferPage() {
 
     const folderName = files[0].webkitRelativePath.split("/")[0];
     setSelectedRepo({ label: folderName, path: folderName });
-
     const allFileList = Array.from(files);
     const total = allFileList.length;
     let gitignorePatterns: string[] = [];
-
     const gitignoreFile = allFileList.find(
       (f) => f.webkitRelativePath === `${folderName}/.gitignore`,
     );
@@ -393,7 +409,6 @@ export default function CodeBrieferPage() {
       processed += batch.length;
       setFolderProgress(Math.round((processed / total) * 100));
     }
-
     entries.sort((a, b) => a.path.localeCompare(b.path));
     setAllFiles(entries);
     setFileContents(contents);
@@ -423,9 +438,9 @@ export default function CodeBrieferPage() {
       setPromptBody(DEFAULT_PROMPT);
     } else {
       setSelectedTemplates(new Set([t.id]));
-      fetch(`/api/briefer/templates/${t.id}/use`, { method: "POST" }).catch(
-        () => {},
-      );
+      fetch(`/api/code-briefer/templates/${t.id}/use`, {
+        method: "POST",
+      }).catch(() => {});
       setPromptBody(t.body);
     }
   }
@@ -439,8 +454,9 @@ export default function CodeBrieferPage() {
           promptBody,
           additionalPrompt,
           joinedFiles,
-          FOOTER_APPEND,
+          footerMode,
           next,
+          contextMode,
         ),
       );
       return next;
@@ -455,8 +471,9 @@ export default function CodeBrieferPage() {
         promptBody,
         additionalPrompt,
         joinedFiles,
-        FOOTER_APPEND,
+        footerMode,
         all,
+        contextMode,
       ),
     );
   }
@@ -469,8 +486,9 @@ export default function CodeBrieferPage() {
         promptBody,
         additionalPrompt,
         joinedFiles,
-        FOOTER_APPEND,
+        footerMode,
         none,
+        contextMode,
       ),
     );
   }
@@ -485,21 +503,19 @@ export default function CodeBrieferPage() {
     setModelUsed("");
     setApplyResults([]);
     setLlmStreaming(true);
-
     const controller = new AbortController();
     llmAbortRef.current = controller;
-
-    const analytical = isAnalyticalPrompt(promptBody);
     const stripped = contextOutput.replace(/^THIS IS A MUST:.*\n?/gm, "");
-    const llmInput = analytical
+    const llmInput = isAnalytical
       ? stripped.slice(stripped.indexOf("PROMPT:"))
       : stripped;
-    const systemPrompt = analytical
+    const systemPrompt = isAnalytical
       ? buildAnalyticalSystemPrompt()
-      : buildChangeSystemPrompt();
-
+      : isChange
+        ? buildChangeSystemPrompt()
+        : buildOtherSystemPrompt();
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -511,7 +527,6 @@ export default function CodeBrieferPage() {
         }),
         signal: controller.signal,
       });
-
       if (!res.ok || !res.body) {
         if (res.status === 503) {
           setLlmSkippedReason("No models available.");
@@ -519,14 +534,11 @@ export default function CodeBrieferPage() {
         }
         throw new Error("request failed");
       }
-
       const usedModel = res.headers.get("X-Model-Used") ?? "";
       if (usedModel) setModelUsed(usedModel);
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let accumulated = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -534,9 +546,8 @@ export default function CodeBrieferPage() {
         setLlmSuggestion(accumulated);
         llmRef.current?.scrollTo({ top: llmRef.current.scrollHeight });
       }
-
       if (accumulated) {
-        const sessionRes = await fetch("/api/chat/sessions", {
+        const sessionRes = await fetch("/api/chatbot/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -547,17 +558,17 @@ export default function CodeBrieferPage() {
         const sessionData = await sessionRes.json();
         const sid = sessionData.session?.id;
         if (sid) {
-          await fetch(`/api/chat/sessions/${sid}/messages`, {
+          await fetch(`/api/chatbot/sessions/${sid}/messages`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ role: "system", content: systemPrompt }),
           });
-          await fetch(`/api/chat/sessions/${sid}/messages`, {
+          await fetch(`/api/chatbot/sessions/${sid}/messages`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ role: "user", content: contextOutput }),
           });
-          await fetch(`/api/chat/sessions/${sid}/messages`, {
+          await fetch(`/api/chatbot/sessions/${sid}/messages`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ role: "assistant", content: accumulated }),
@@ -577,7 +588,6 @@ export default function CodeBrieferPage() {
   async function handleSmartSelect() {
     if (!selectedRepo || filteredFiles.length === 0 || !promptBody.trim())
       return;
-
     if (fileNamesHint.trim()) {
       const resolved = resolveFileNames(
         fileNamesHint,
@@ -589,15 +599,12 @@ export default function CodeBrieferPage() {
         return;
       }
     }
-
     setLoadingSmartSelect(true);
     setSmartSelected(new Set());
-
     try {
       let files: { path: string; content: string }[];
-
       if (isLocal) {
-        const contentsRes = await fetch("/api/briefer/read", {
+        const contentsRes = await fetch("/api/code-briefer/read", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -620,8 +627,7 @@ export default function CodeBrieferPage() {
           }))
           .filter((f) => f.content);
       }
-
-      const smartRes = await fetch("/api/briefer/smart-select", {
+      const smartRes = await fetch("/api/code-briefer/smart-select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -651,13 +657,11 @@ export default function CodeBrieferPage() {
     setChatSessionId(null);
     setFullContextFiles(new Set());
     setJoinedFiles([]);
-
     try {
       const paths = Array.from(selectedFiles);
       let files: { path: string; content: string }[];
-
       if (isLocal) {
-        const res = await fetch("/api/briefer/read", {
+        const res = await fetch("/api/code-briefer/read", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -674,22 +678,21 @@ export default function CodeBrieferPage() {
           .map((p) => ({ path: p, content: fileContents.get(p) ?? "" }))
           .filter((f) => f.content);
       }
-
       setJoinedFiles(files);
-      const fcSet = fullContext
-        ? new Set(files.map((f) => f.path))
-        : new Set<string>();
+      const fcSet =
+        contextMode === "full"
+          ? new Set(files.map((f) => f.path))
+          : new Set<string>();
       setFullContextFiles(fcSet);
-
       const built = buildOutput(
         promptBody,
         additionalPrompt,
         files,
-        FOOTER_APPEND,
+        footerMode,
         fcSet,
+        contextMode,
       );
       setOutput(built);
-
       if (!isLocal) {
         setFolderInputKey((k) => k + 1);
         setAllFiles([]);
@@ -698,16 +701,13 @@ export default function CodeBrieferPage() {
         setSmartSelected(new Set());
         setSelectedRepo(null);
       }
-
       clearDraft();
-
       const label =
         templates
           .filter((t) => selectedTemplates.has(t.id))
           .map((t) => t.label)
           .join("+") || "custom";
-
-      await fetch("/api/briefer/sessions", {
+      await fetch("/api/code-briefer/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -719,7 +719,6 @@ export default function CodeBrieferPage() {
           llm_suggestion: llmSuggestion || null,
         }),
       }).catch(() => {});
-
       if (llmEnabled) {
         const tokenCount = estimateTokens(built);
         if (tokenCount > LLM_TOKEN_LIMIT) {
@@ -743,7 +742,7 @@ export default function CodeBrieferPage() {
     }
   }
 
-  async function handleApplyChanges() {
+  async function handleApplyChanges(revert: boolean = false) {
     if (!selectedRepo || !llmSuggestion || llmStreaming) return;
     const blocks = parseSuggestion(llmSuggestion);
     if (blocks.length === 0) return;
@@ -753,18 +752,18 @@ export default function CodeBrieferPage() {
       file: string;
       ok: boolean;
       prettified?: boolean;
-      error?: string;
+      error: string;
     }[] = [];
     for (const block of blocks) {
       try {
-        const res = await fetch("/api/briefer/apply", {
+        const res = await fetch("/api/code-briefer/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             repoPath: selectedRepo.path,
             filePath: block.filePath,
-            from: block.from,
-            to: block.to,
+            from: revert ? block.to : block.from,
+            to: revert ? block.from : block.to,
           }),
         });
         const data = await res.json();
@@ -772,7 +771,7 @@ export default function CodeBrieferPage() {
           file: block.filePath,
           ok: !!data.ok,
           prettified: data.prettified,
-          error: data.error,
+          error: data.error || "",
         });
       } catch (e) {
         results.push({ file: block.filePath, ok: false, error: String(e) });
@@ -805,10 +804,27 @@ export default function CodeBrieferPage() {
   const tokenCount = useMemo(() => estimateTokens(output), [output]);
   const isDefault1 = promptBody === DEFAULT_PROMPT;
   const isDefault2 = promptBody === DEFAULT_PROMPT_2;
+  const activeTemplate =
+    templates.find((t) => selectedTemplates.has(t.id)) ?? null;
+  const isAnalytical = activeTemplate?.type === "analytical";
+  const isChange = activeTemplate?.type === "change";
+  const footerMode: "full" | "none" | "default2" | "change" = isAnalytical
+    ? "none"
+    : isDefault2
+      ? "default2"
+      : isChange
+        ? "change"
+        : "full";
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
-
   const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-briefer");
+
+  function cycleContextMode() {
+    setContextMode((prev) => {
+      const idx = CONTEXT_MODE_CYCLE.indexOf(prev);
+      return CONTEXT_MODE_CYCLE[(idx + 1) % CONTEXT_MODE_CYCLE.length];
+    });
+  }
 
   if (isMobile) {
     return (
@@ -837,18 +853,13 @@ export default function CodeBrieferPage() {
           subtitle="Join code files, prepend a prompt, ship to any LLM."
           mediumUrl={toolConfig?.mediumUrl}
         />
-        <Link
-          href="/tools/code-briefer/history"
-          className="btn-ghost text-xs py-1 px-3"
-        >
-          History ↗
-        </Link>
+        <HistoryButton href="/tools/code-briefer/history" />
       </div>
 
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
-          <div className="card space-y-2 flex-shrink-0">
-            <p className="section-label mb-0">Repository</p>
+          <Card className="space-y-2 flex-shrink-0">
+            <SectionLabel noMargin>Repository</SectionLabel>
             {isLocal ? (
               <>
                 <RepoSelector
@@ -857,19 +868,8 @@ export default function CodeBrieferPage() {
                   onChange={loadRepo}
                   disabled={loadingFiles}
                 />
-                {repoError && (
-                  <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
-                    {repoError}
-                  </p>
-                )}
-                {loadingFiles && (
-                  <p
-                    className="text-xs font-mono"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Scanning…
-                  </p>
-                )}
+                {repoError && <ErrorText>{repoError}</ErrorText>}
+                {loadingFiles && <MonoText color="muted">Scanning…</MonoText>}
               </>
             ) : (
               <div className="space-y-2">
@@ -916,11 +916,11 @@ export default function CodeBrieferPage() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
 
-          <div className="card flex-shrink-0">
+          <Card className="flex-shrink-0">
             <div className="flex items-center justify-between mb-1.5">
-              <p className="section-label mb-0">Extensions</p>
+              <SectionLabel noMargin>Extensions</SectionLabel>
               <input
                 type="text"
                 className="input-base"
@@ -937,39 +937,26 @@ export default function CodeBrieferPage() {
             </div>
             <div className="flex flex-wrap gap-1">
               {[...EXT_GROUPS.flatMap((g) => g.exts)].map((ext) => (
-                <button
+                <TagButton
                   key={ext}
+                  active={enabledExts.has(ext)}
                   onClick={() => toggleExt(ext)}
-                  className="text-xs font-mono px-1.5 py-0.5 rounded border transition-all"
-                  style={{
-                    borderColor: enabledExts.has(ext)
-                      ? "var(--accent)"
-                      : "var(--border)",
-                    background: enabledExts.has(ext)
-                      ? "var(--accent-dim)"
-                      : "transparent",
-                    color: enabledExts.has(ext)
-                      ? "var(--accent)"
-                      : "var(--muted)",
-                  }}
+                  style={{ padding: "2px 6px", fontSize: 11 }}
                 >
                   {ext}
-                </button>
+                </TagButton>
               ))}
             </div>
-          </div>
+          </Card>
 
           {selectedRepo && (
-            <div className="card flex flex-col min-h-0 flex-1">
+            <Card className="flex flex-col min-h-0 flex-1">
               <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
-                <p className="section-label mb-0">Files</p>
+                <SectionLabel noMargin>Files</SectionLabel>
                 <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-xs font-mono"
-                    style={{ color: "var(--muted)" }}
-                  >
+                  <MonoText color="muted">
                     {selectedFiles.size}/{displayedFiles.length}
-                  </span>
+                  </MonoText>
                   <button
                     onClick={() => {
                       if (allDisplayedSelected) {
@@ -1011,63 +998,67 @@ export default function CodeBrieferPage() {
                   smartSelected={smartSelected}
                 />
               </div>
-            </div>
+            </Card>
           )}
 
-          <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
-            <button
-              onClick={() => setLlmEnabled((v) => !v)}
-              className="btn-ghost text-xs font-mono py-1 px-2"
-              style={{
-                borderColor: llmEnabled ? "var(--accent)" : "var(--border)",
-                color: llmEnabled ? "var(--accent)" : "var(--muted)",
-              }}
-            >
-              {llmEnabled ? "LLM On" : "LLM Off"}
-            </button>
-            <button
-              onClick={() => setFullContext((v) => !v)}
-              className="btn-ghost text-xs font-mono py-1 px-2"
-              style={{
-                borderColor: fullContext ? "var(--accent)" : "var(--border)",
-                color: fullContext ? "var(--accent)" : "var(--muted)",
-              }}
-            >
-              {fullContext ? "Full Context On" : "Full Context Off"}
-            </button>
-            <button
-              onClick={handleSmartSelect}
-              disabled={
-                !selectedRepo ||
-                filteredFiles.length === 0 ||
-                !promptBody.trim() ||
-                loadingSmartSelect
-              }
-              className="btn-ghost flex-1 justify-center text-xs font-mono"
-              style={{
-                opacity:
+          <div className="flex flex-col gap-1.5 flex-shrink-0">
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setLlmEnabled((v) => !v)}
+                className="btn-ghost text-xs font-mono py-1 px-2"
+                style={{
+                  borderColor: llmEnabled ? "var(--accent)" : "var(--border)",
+                  color: llmEnabled ? "var(--accent)" : "var(--muted)",
+                }}
+              >
+                {llmEnabled ? "LLM On" : "LLM Off"}
+              </button>
+              <button
+                onClick={cycleContextMode}
+                className="btn-ghost text-xs font-mono py-1 px-2"
+                style={{
+                  borderColor:
+                    contextMode !== "off" ? "var(--accent)" : "var(--border)",
+                  color:
+                    contextMode !== "off" ? "var(--accent)" : "var(--muted)",
+                }}
+              >
+                {CONTEXT_MODE_LABELS[contextMode]}
+              </button>
+              <button
+                onClick={handleSmartSelect}
+                disabled={
                   !selectedRepo ||
                   filteredFiles.length === 0 ||
-                  !promptBody.trim()
-                    ? 0.5
-                    : 1,
-              }}
-            >
-              {loadingSmartSelect ? (
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin"
-                    style={{
-                      borderColor: "var(--accent)",
-                      borderTopColor: "transparent",
-                    }}
-                  />
-                  Thinking…
-                </span>
-              ) : (
-                "Smart Select"
-              )}
-            </button>
+                  !promptBody.trim() ||
+                  loadingSmartSelect
+                }
+                className="btn-primary flex-1 justify-center text-xs font-mono"
+                style={{
+                  opacity:
+                    !selectedRepo ||
+                    filteredFiles.length === 0 ||
+                    !promptBody.trim()
+                      ? 0.6
+                      : 1,
+                }}
+              >
+                {loadingSmartSelect ? (
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin"
+                      style={{
+                        borderColor: "var(--accent)",
+                        borderTopColor: "transparent",
+                      }}
+                    />
+                    Thinking…
+                  </span>
+                ) : (
+                  "Smart Select"
+                )}
+              </button>
+            </div>
             <button
               onClick={handleJoin}
               disabled={
@@ -1076,7 +1067,7 @@ export default function CodeBrieferPage() {
                 !promptBody.trim() ||
                 joining
               }
-              className="btn-primary flex-1 justify-center text-xs font-mono"
+              className="btn-primary justify-center text-xs font-mono"
               style={{
                 opacity:
                   !selectedRepo ||
@@ -1094,73 +1085,46 @@ export default function CodeBrieferPage() {
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 gap-3">
-          <div className="card flex-shrink-0 space-y-2">
+          <Card className="flex-shrink-0 space-y-2">
             <div className="flex flex-wrap gap-1.5 items-center">
-              <p className="section-label mb-0 mr-1">Prompt</p>
+              <SectionLabel noMargin className="mr-1">
+                Prompt
+              </SectionLabel>
               {templates.map((t) => (
-                <button
+                <TagButton
                   key={t.id}
+                  active={safeSelectedTemplates.has(t.id)}
                   onClick={() => selectTemplate(t)}
-                  className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
-                  style={{
-                    borderColor: safeSelectedTemplates.has(t.id)
-                      ? "var(--accent)"
-                      : "var(--border)",
-                    background: safeSelectedTemplates.has(t.id)
-                      ? "var(--accent-dim)"
-                      : "transparent",
-                    color: safeSelectedTemplates.has(t.id)
-                      ? "var(--accent)"
-                      : "var(--secondary)",
-                  }}
                 >
                   {t.label}
-                </button>
+                </TagButton>
               ))}
             </div>
             <div className="flex gap-2">
               <div className="flex-1 flex flex-col gap-1">
                 <div className="flex justify-start gap-1">
-                  <button
+                  <TagButton
+                    active={isDefault1}
                     onClick={() => {
                       setPromptBody(DEFAULT_PROMPT);
                       setAdditionalPrompt("");
                       setFileNamesHint("");
                       setSelectedTemplates(new Set());
                     }}
-                    className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
-                    style={{
-                      borderColor: isDefault1
-                        ? "var(--accent)"
-                        : "var(--border)",
-                      color: isDefault1 ? "var(--accent)" : "var(--muted)",
-                      background: isDefault1
-                        ? "var(--accent-dim)"
-                        : "transparent",
-                    }}
                   >
                     Default 1
-                  </button>
-                  <button
+                  </TagButton>
+                  <TagButton
+                    active={isDefault2}
                     onClick={() => {
                       setPromptBody(DEFAULT_PROMPT_2);
                       setAdditionalPrompt("");
                       setFileNamesHint("");
                       setSelectedTemplates(new Set());
                     }}
-                    className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
-                    style={{
-                      borderColor: isDefault2
-                        ? "var(--accent)"
-                        : "var(--border)",
-                      color: isDefault2 ? "var(--accent)" : "var(--muted)",
-                      background: isDefault2
-                        ? "var(--accent-dim)"
-                        : "transparent",
-                    }}
                   >
                     Default 2
-                  </button>
+                  </TagButton>
                 </div>
                 <textarea
                   className="input-base flex-1 resize-none"
@@ -1216,7 +1180,7 @@ export default function CodeBrieferPage() {
                 />
               </div>
             </div>
-          </div>
+          </Card>
 
           <div className="flex-1 flex gap-3 min-h-0">
             <LlmSuggestionPanel

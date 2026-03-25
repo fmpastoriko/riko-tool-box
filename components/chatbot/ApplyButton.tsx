@@ -12,56 +12,66 @@ export default function ApplyButton({
 }) {
   const blocks = parseSuggestion(content);
   const [results, setResults] = useState<
-    { file: string; ok: boolean; prettified?: boolean; error?: string }[]
+    { file: string; ok: boolean; prettified?: boolean; error: string }[]
   >([]);
   const [applying, setApplying] = useState(false);
+  const [revert, setRevert] = useState(false);
 
   if (blocks.length === 0) return null;
 
   return (
     <div className="mt-2 space-y-1">
-      <button
-        onClick={async () => {
-          setApplying(true);
-          setResults([]);
-          const res: {
-            file: string;
-            ok: boolean;
-            prettified?: boolean;
-            error?: string;
-          }[] = [];
-          for (const block of blocks) {
-            try {
-              const r = await fetch("/api/briefer/apply", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  repoPath,
-                  filePath: block.filePath,
-                  from: block.from,
-                  to: block.to,
-                }),
-              });
-              const d = await r.json();
-              res.push({
-                file: block.filePath,
-                ok: !!d.ok,
-                prettified: d.prettified,
-                error: d.error,
-              });
-            } catch (e) {
-              res.push({ file: block.filePath, ok: false, error: String(e) });
+      <div className="flex gap-2">
+        <button
+          onClick={async () => {
+            setApplying(true);
+            setResults([]);
+            const res: {
+              file: string;
+              ok: boolean;
+              prettified?: boolean;
+              error: string;
+            }[] = [];
+            for (const block of blocks) {
+              try {
+                const r = await fetch("/api/code-briefer/apply", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    repoPath,
+                    filePath: block.filePath,
+                    from: revert ? block.to : block.from,
+                    to: revert ? block.from : block.to,
+                  }),
+                });
+                const d = await r.json();
+                res.push({
+                  file: block.filePath,
+                  ok: !!d.ok,
+                  prettified: d.prettified,
+                  error: d.error,
+                });
+              } catch (e) {
+                res.push({ file: block.filePath, ok: false, error: String(e) });
+              }
             }
-          }
-          setResults(res);
-          setApplying(false);
-        }}
-        disabled={applying}
-        className="btn-primary text-xs py-1 px-3"
-        style={{ opacity: applying ? 0.6 : 1 }}
-      >
-        {applying ? "Applying…" : "⚡ Apply Changes"}
-      </button>
+            setResults(res);
+            setApplying(false);
+          }}
+          disabled={applying}
+          className="btn-primary text-xs py-1 px-3"
+          style={{ opacity: applying ? 0.6 : 1 }}
+        >
+          {applying ? "Applying…" : revert ? "↩ Revert" : "⚡ Apply Changes"}
+        </button>
+        <button
+          onClick={() => setRevert((r) => !r)}
+          className={`btn-ghost text-xs py-1 px-2 ${revert ? "border-accent" : ""}`}
+          style={revert ? { color: "var(--accent)", borderColor: "var(--accent)" } : {}}
+        >
+          ↩ Revert
+        </button>
+      </div>
 
       {results.map((r, i) => (
         <div key={i} className="flex items-center gap-2 text-xs font-mono">

@@ -5,6 +5,11 @@ import { estimateTokens } from "@/lib/fileUtils";
 import { summarizeFile } from "@/lib/summarize";
 import FileTreeBase from "@/components/FileTreeBase";
 import { DEFAULT_EXTS, EXT_GROUPS } from "@/config/fileExtensions";
+import Card from "@/components/Card";
+import SectionLabel from "@/components/SectionLabel";
+import TagButton from "@/components/TagButton";
+import ErrorText from "@/components/ErrorText";
+import MonoText from "@/components/MonoText";
 
 type FileEntry = { path: string; size: number };
 
@@ -61,7 +66,7 @@ export default function RepoFileTree({
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/api/briefer/files", {
+        const res = await fetch("/api/code-briefer/files", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ repoPath }),
@@ -102,7 +107,7 @@ export default function RepoFileTree({
     if (selectedFiles.size === 0) return;
     setInjecting(true);
     try {
-      const res = await fetch("/api/briefer/read", {
+      const res = await fetch("/api/code-briefer/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -161,7 +166,7 @@ export default function RepoFileTree({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <p className="section-label mb-0">Select Files</p>
+          <SectionLabel noMargin>Select Files</SectionLabel>
           <button
             onClick={onClose}
             className="text-xs font-mono px-3 py-1 rounded-lg"
@@ -171,17 +176,11 @@ export default function RepoFileTree({
           </button>
         </div>
 
-        {error && (
-          <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
-            {error}
-          </p>
-        )}
+        {error && <ErrorText>{error}</ErrorText>}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
-              Extensions
-            </p>
+            <MonoText color="muted">Extensions</MonoText>
             <input
               type="text"
               className="input-base"
@@ -198,32 +197,22 @@ export default function RepoFileTree({
           </div>
           <div className="flex flex-wrap gap-1">
             {EXT_GROUPS.flatMap((g) => g.exts).map((ext) => (
-              <button
+              <TagButton
                 key={ext}
+                active={enabledExts.has(ext)}
                 onClick={() => toggleExt(ext)}
-                className="text-xs font-mono px-2 py-0.5 rounded border transition-all"
-                style={{
-                  borderColor: enabledExts.has(ext)
-                    ? "var(--accent)"
-                    : "var(--border)",
-                  background: enabledExts.has(ext)
-                    ? "var(--accent-dim)"
-                    : "var(--surface-dim)",
-                  color: enabledExts.has(ext)
-                    ? "var(--accent)"
-                    : "var(--secondary)",
-                }}
+                style={{ padding: "2px 8px", fontSize: 11 }}
               >
                 {ext}
-              </button>
+              </TagButton>
             ))}
           </div>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+          <MonoText color="muted">
             {selectedFiles.size}/{filteredFiles.length} selected
-          </span>
+          </MonoText>
           <button
             onClick={() => {
               if (selectedFiles.size === filteredFiles.length) {
@@ -244,12 +233,9 @@ export default function RepoFileTree({
           style={{ maxHeight: 320 }}
         >
           {loading ? (
-            <p
-              className="text-xs font-mono text-center py-8"
-              style={{ color: "var(--muted)" }}
-            >
+            <MonoText color="muted" className="text-center py-8">
               Scanning…
-            </p>
+            </MonoText>
           ) : (
             <FileTreeBase
               files={filteredFiles}
@@ -264,10 +250,10 @@ export default function RepoFileTree({
           className="flex items-center justify-between pt-1 border-t"
           style={{ borderColor: "var(--border)" }}
         >
-          <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+          <MonoText color="muted">
             {selectedFiles.size > 0 &&
               `~${(tokenEstimate / 1000).toFixed(1)}k tokens est.`}
-          </span>
+          </MonoText>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleInject(true)}

@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/formatDate";
+import Card from "@/components/Card";
+import SectionLabel from "@/components/SectionLabel";
+import StatusBadge from "@/components/StatusBadge";
+import ErrorText from "@/components/ErrorText";
+import MonoText from "@/components/MonoText";
 
 interface BaseItem {
   id: string;
@@ -73,16 +78,8 @@ export default function HistoryPageLayout<T extends BaseItem>({
         </Link>
       </div>
 
-      {loading && (
-        <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
-          Loading…
-        </p>
-      )}
-      {error && (
-        <p className="text-xs" style={{ color: "rgb(239,68,68)" }}>
-          {error}
-        </p>
-      )}
+      {loading && <MonoText color="muted">Loading…</MonoText>}
+      {error && <ErrorText>{error}</ErrorText>}
 
       {items && (
         <div className="flex items-center gap-2">
@@ -92,12 +89,9 @@ export default function HistoryPageLayout<T extends BaseItem>({
                 className="w-2 h-2 rounded-full"
                 style={{ background: "rgb(34,197,94)" }}
               />
-              <span
-                className="text-xs font-mono"
-                style={{ color: "rgb(34,197,94)" }}
-              >
+              <MonoText color="muted" style={{ color: "rgb(34,197,94)" }}>
                 Authenticated, showing real content
-              </span>
+              </MonoText>
             </>
           ) : (
             <>
@@ -105,20 +99,14 @@ export default function HistoryPageLayout<T extends BaseItem>({
                 className="w-2 h-2 rounded-full"
                 style={{ background: "var(--muted)" }}
               />
-              <span
-                className="text-xs font-mono"
-                style={{ color: "var(--muted)" }}
-              >
+              <MonoText color="muted">
                 Showing your {dataKey}, others are hidden
-              </span>
+              </MonoText>
             </>
           )}
-          <span
-            className="text-xs font-mono ml-auto"
-            style={{ color: "var(--muted)" }}
-          >
+          <MonoText color="muted" className="ml-auto">
             {countLabel(items.length)}
-          </span>
+          </MonoText>
         </div>
       )}
 
@@ -134,9 +122,8 @@ export default function HistoryPageLayout<T extends BaseItem>({
       {items && items.length > 0 && (
         <div className="space-y-3">
           {items.map((item) => (
-            <div
+            <Card
               key={item.id}
-              className="card"
               style={{
                 borderColor:
                   expanded === item.id ? "var(--accent)" : "var(--border)",
@@ -151,15 +138,9 @@ export default function HistoryPageLayout<T extends BaseItem>({
                 className="w-full text-left flex items-center gap-4 flex-wrap"
                 disabled={!item.is_own}
               >
-                <span
-                  className="font-mono text-xs px-2 py-0.5 rounded"
-                  style={{
-                    background: "var(--border)",
-                    color: "var(--secondary)",
-                  }}
-                >
+                <StatusBadge variant="border">
                   {item.id.slice(0, 8)}…
-                </span>
+                </StatusBadge>
                 <span className="text-xs" style={{ color: "var(--muted)" }}>
                   {formatDate(item.created_at)}
                 </span>
@@ -173,7 +154,7 @@ export default function HistoryPageLayout<T extends BaseItem>({
               {expanded === item.id && item.is_own && (
                 <div className="mt-4">{renderExpanded(item)}</div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

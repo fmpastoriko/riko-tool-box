@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 
 export function runPrettier(abs: string, repoPath: string): boolean {
   try {
-    execSync(`npx prettier --write "${abs}"`, {
+    execSync(`npx prettier --write ${JSON.stringify(abs)}`, {
       cwd: repoPath,
       timeout: 15000,
       stdio: "ignore",
