@@ -379,9 +379,6 @@ OWNER_GEMINI_API_KEY_1=
 OWNER_GROQ_API_KEY_1=
 GROQ_API_KEY_PUBLIC=
 
-# GLM API keys
-OWNER_GLM_API_KEY_1=
-
 # Local mode (enables repo dropdown, Apply Changes in Code Briefer, and Code Applier)
 NEXT_PUBLIC_LOCAL=true
 

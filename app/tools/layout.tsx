@@ -44,23 +44,25 @@ export default function ToolsLayout({
           >
             Tools
           </p>
-          {TOOLS_CONFIG.map((t) => {
-            const active = pathname.startsWith(t.href);
-            return (
-              <Link
-                key={t.href}
-                href={t.href}
-                className="text-xs font-mono px-3 py-2 rounded-lg transition-all flex-shrink-0 whitespace-nowrap"
-                style={{
-                  background: active ? "var(--accent-dim)" : "transparent",
-                  color: active ? "var(--accent)" : "var(--secondary)",
-                  border: `1px solid ${active ? "var(--accent)" : "transparent"}`,
-                }}
-              >
-                {t.label}
-              </Link>
-            );
-          })}
+          <div className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
+            {TOOLS_CONFIG.map((t) => {
+              const active = pathname.startsWith(t.href);
+              return (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  className="text-xs font-mono px-3 py-2 rounded-lg transition-all flex-shrink-0 whitespace-nowrap"
+                  style={{
+                    background: active ? "var(--accent-dim)" : "transparent",
+                    color: active ? "var(--accent)" : "var(--secondary)",
+                    border: `1px solid ${active ? "var(--accent)" : "transparent"}`,
+                  }}
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         <button

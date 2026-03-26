@@ -41,14 +41,6 @@ export default function PuzzleNavigation({
         </>
       )}
       <button
-        onClick={() => onIndexChange(count - 1)}
-        className="btn-ghost text-xs"
-        disabled={count === 0}
-        style={{ opacity: count === 0 ? 0.4 : 1 }}
-      >
-        Latest
-      </button>
-      <button
         onClick={onDownload}
         disabled={downloading || count === 0}
         className="btn-ghost text-xs"

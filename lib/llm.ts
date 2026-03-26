@@ -11,8 +11,6 @@ import { PUBLIC_GROQ_MODEL } from "@/config/llm";
 
 const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
 
-const GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
-
 type ContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -212,76 +210,6 @@ async function groqGenerateText(
   return data?.choices?.[0]?.message?.content ?? "";
 }
 
-async function glmStreamRequest(
-  model: string,
-  apiKey: string,
-  messages: ChatMessage[],
-): Promise<ReadableStream<Uint8Array> | null> {
-  const res = await fetch(`${GLM_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ model, messages, stream: true }),
-  });
-
-  if (res.status === 429) return null;
-  if (!res.ok || !res.body) throw new Error(`GLM error ${res.status}`);
-
-  const encoder = new TextEncoder();
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-
-  return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-          const data = trimmed.slice(5).trim();
-          if (data === "[DONE]") continue;
-          try {
-            const json = JSON.parse(data);
-            const token = json?.choices?.[0]?.delta?.content ?? "";
-            if (token) controller.enqueue(encoder.encode(token));
-          } catch {}
-        }
-      }
-      controller.close();
-    },
-  });
-}
-
-async function glmGenerateText(
-  model: string,
-  apiKey: string,
-  prompt: string,
-): Promise<string | null> {
-  const res = await fetch(`${GLM_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-      stream: false,
-    }),
-  });
-  if (res.status === 429) return null;
-  if (!res.ok) throw new Error(`GLM error ${res.status}`);
-  const data = await res.json();
-  return data?.choices?.[0]?.message?.content ?? "";
-}
-
 async function tryChain(
   chain: ModelConfig[],
   fn: (
@@ -318,8 +246,6 @@ function dispatchStream(
 ): Promise<ReadableStream<Uint8Array> | null> {
   if (config.provider === "gemini")
     return geminiStreamRequest(config.model, key, messages);
-  if (config.provider === "glm")
-    return glmStreamRequest(config.model, key, messages);
   return groqStreamRequest(config.model, key, messages);
 }
 
@@ -330,8 +256,6 @@ function dispatchText(
 ): Promise<string | null> {
   if (config.provider === "gemini")
     return geminiGenerateText(config.model, key, prompt);
-  if (config.provider === "glm")
-    return glmGenerateText(config.model, key, prompt);
   return groqGenerateText(config.model, key, prompt);
 }
 

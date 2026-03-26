@@ -796,7 +796,7 @@ export default function CodeBrieferPage() {
         <HistoryButton href="/tools/code-briefer/history" />
       </div>
       <div className="flex-1 flex gap-4 min-h-0">
-        <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
+        <div className="w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto min-h-0 pr-1">
           <Card title="Repository" className="flex-shrink-0">
             {isLocal ? (
               <>

@@ -261,10 +261,10 @@ export default function HomePage() {
         style={{ height: "calc(100vh - 56px)", overflow: "hidden" }}
       >
         <div
-          className="flex flex-col gap-4 flex-shrink-0"
+          className="flex flex-col gap-4 flex-shrink-0 overflow-y-auto"
           style={{ width: 360 }}
         >
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-4 flex-shrink-0">
             <img
               src="/prof-pic.jpg"
               alt="Riko"
@@ -284,7 +284,7 @@ export default function HomePage() {
             </div>
           </div>
           <div
-            className="text-base leading-relaxed whitespace-pre-line"
+            className="text-base leading-relaxed whitespace-pre-line flex-shrink-0"
             style={{ color: "var(--secondary)" }}
           >
             {BIO_TEXT}
@@ -294,7 +294,7 @@ export default function HomePage() {
               </div>
             )}
           </div>
-          <div>
+          <div className="flex-shrink-0">
             <SectionLabel className="mb-2">Toolbox</SectionLabel>
             <ToolGrid />
           </div>

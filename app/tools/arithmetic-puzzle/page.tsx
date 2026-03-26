@@ -14,7 +14,6 @@ import Slider from "@/components/Slider";
 import PuzzleNavigation from "@/components/PuzzleNavigation";
 import { downloadPdf } from "@/lib/downloadPdf";
 import HistoryButton from "@/components/HistoryButton";
-import LatestButton from "@/components/LatestButton";
 import Card from "@/components/Card";
 import TagButton from "@/components/TagButton";
 import EmptyState from "@/components/EmptyState";
@@ -147,22 +146,6 @@ export default function ArithmeticPuzzlePage() {
       setGenerating(false);
     }
   }, [form, updatePdfPreview]);
-  const handleLoadLatest = useCallback(
-    (session: unknown) => {
-      const s = session as Session;
-      try {
-        const loadedPuzzles = JSON.parse(s.puzzles_json);
-        const loadedOptions = JSON.parse(s.options_json);
-        setPuzzles(loadedPuzzles);
-        setCurrentIndex(0);
-        setForm(loadedOptions);
-        updatePdfPreview(loadedPuzzles);
-      } catch {
-        setError("Failed to load latest session.");
-      }
-    },
-    [updatePdfPreview],
-  );
   const handleDownload = useCallback(async () => {
     if (puzzles.length === 0) return;
     setDownloading(true);
@@ -189,15 +172,11 @@ export default function ArithmeticPuzzlePage() {
           mediumUrl={toolConfig.mediumUrl}
         />
         <div className="flex gap-2">
-          <LatestButton
-            fetchUrl="/api/arithmetic-puzzle/sessions"
-            onLoadLatest={handleLoadLatest}
-          />
           <HistoryButton href="/tools/arithmetic-puzzle/history" />
         </div>
       </div>
       <div className="flex gap-4 flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3">
+        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3 lg:overflow-y-auto lg:min-h-0">
           <Card title="Operators" className="flex-shrink-0">
             <div className="flex gap-2 flex-wrap mt-1">
               {ALL_OPERATORS.map((op) => (
@@ -300,16 +279,17 @@ export default function ArithmeticPuzzlePage() {
             {generating ? "Generating..." : "Generate"}
           </button>
           {error && <ErrorText>{error}</ErrorText>}
-          <button
-            onClick={handleDownload}
-            disabled={puzzles.length === 0 || downloading}
-            className="btn-ghost text-xs font-mono flex-shrink-0 justify-center lg:hidden"
-            style={{ opacity: puzzles.length === 0 ? 0.5 : 1 }}
-          >
-            {downloading
-              ? "Downloading..."
-              : `Download PDF${puzzles.length > 1 ? ` (${puzzles.length})` : ""}`}
-          </button>
+          {puzzles.length > 0 && pdfPreviewUrl && !generating && (
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="btn-ghost text-xs font-mono flex-shrink-0 justify-center lg:hidden"
+            >
+              {downloading
+                ? "Downloading..."
+                : `Download PDF${puzzles.length > 1 ? ` (${puzzles.length})` : ""}`}
+            </button>
+          )}
         </div>
         <PanelBox
           title={`Preview${puzzles.length > 0 ? ` (${currentIndex + 1} / ${puzzles.length})` : ""}`}
