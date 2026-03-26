@@ -5,8 +5,7 @@ import { requireLocal } from "@/lib/localGuard";
 import { validateFileWrite } from "@/lib/validateFileWrite";
 import { prettifiedResponse, internalError } from "@/lib/apiUtils";
 import { runPrettier } from "@/lib/prettierFile";
-
-const BACKUP_DIR = "/tmp/code-applier-backup";
+import { BACKUP_DIR } from "@/lib/backupUtils";
 
 export async function POST(req: NextRequest) {
   const guard = requireLocal();

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface LatestButtonProps {
   fetchUrl: string;
@@ -10,33 +10,31 @@ export default function LatestButton({
   fetchUrl,
   onLoadLatest,
 }: LatestButtonProps) {
-  const [loading, setLoading] = useState(true);
-  const [latestSession, setLatestSession] = useState<unknown | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  async function handleClick() {
     setLoading(true);
-    fetch(fetchUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        const sessions = data.sessions || [];
-        if (sessions.length > 0) {
-          setLatestSession(sessions[0]);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [fetchUrl]);
-
-  if (!latestSession) return null;
+    try {
+      const res = await fetch(fetchUrl);
+      const data = await res.json();
+      const sessions = data.sessions || [];
+      if (sessions.length > 0) {
+        onLoadLatest(sessions[0]);
+      }
+    } catch {
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <button
-      onClick={() => onLoadLatest(latestSession)}
-      disabled={loading || !latestSession}
+      onClick={handleClick}
+      disabled={loading}
       className="btn-ghost text-xs py-1 px-3 flex-shrink-0"
-      style={{ opacity: loading || !latestSession ? 0.4 : 1 }}
+      style={{ opacity: loading ? 0.4 : 1 }}
     >
-      Latest
+      {loading ? "Loading…" : "Latest"}
     </button>
   );
 }

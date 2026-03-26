@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
+import path from "path";
 import { requireLocal } from "@/lib/localGuard";
 import { validateFileWrite } from "@/lib/validateFileWrite";
 import { prettifiedResponse, internalError } from "@/lib/apiUtils";
 import { runPrettier } from "@/lib/prettierFile";
+import { createBackup } from "@/lib/backupUtils";
 
 function normalizeIndent(text: string): string {
   const lines = text.split("\n");
@@ -84,6 +86,8 @@ export async function POST(req: NextRequest) {
         { status: 422 },
       );
     }
+
+    createBackup(abs, filePath, "cb");
 
     fs.writeFileSync(abs, updated, "utf-8");
     const prettified = runPrettier(abs, repoPath);

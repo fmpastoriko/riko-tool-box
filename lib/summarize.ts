@@ -1,15 +1,25 @@
 export function summarizeFile(
   filePath: string,
   content: string,
-  mode: "full" | "semi" | "names" = "full",
+  mode: "full" | "semi" | "names" | "filename" = "full",
 ): string {
-  if (mode === "names") {
-    const name = filePath.split("/").pop() ?? filePath;
-    return name;
+  if (mode === "filename") {
+    return filePath.split("/").pop() ?? filePath;
   }
 
   const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
   const isJS = ["js", "jsx", "ts", "tsx", "mjs", "cjs"].includes(ext);
+
+  if (mode === "names") {
+    if (isJS) return summarizeJSNames(content);
+    if (ext === "css" || ext === "scss")
+      return filePath.split("/").pop() ?? filePath;
+    if (ext === "vue") return summarizeVueNames(content);
+    if (ext === "py") return summarizePythonNames(content);
+    if (ext === "sql") return filePath.split("/").pop() ?? filePath;
+    if (ext === "json") return filePath.split("/").pop() ?? filePath;
+    return filePath.split("/").pop() ?? filePath;
+  }
 
   if (mode === "semi") {
     if (isJS) return summarizeJS(content, "semi");
@@ -68,15 +78,38 @@ function stripSignature(line: string): string {
   return line;
 }
 
+function isImport(trimmed: string): boolean {
+  return /^import\s/.test(trimmed);
+}
+
+function isFunctionName(trimmed: string): boolean {
+  return (
+    /^(export\s+)?(async\s+)?function\s+[A-Za-z_$]/.test(trimmed) ||
+    /^(export\s+)?(abstract\s+)?class\s+[A-Za-z_$]/.test(trimmed)
+  );
+}
+
 function isSemiSig(trimmed: string): boolean {
   return (
-    /^(export\s+)?(async\s+)?function\s+/.test(trimmed) ||
+    isFunctionName(trimmed) ||
     /^(export\s+)?type\s+[A-Za-z_$]/.test(trimmed) ||
     /^(export\s+)?interface\s+[A-Za-z_$]/.test(trimmed) ||
-    /^(export\s+)?(abstract\s+)?class\s+[A-Za-z_$]/.test(trimmed) ||
     /^export\s+const\s+[A-Za-z_$]/.test(trimmed) ||
-    /^import\s/.test(trimmed)
+    isImport(trimmed)
   );
+}
+
+function summarizeJSNames(content: string): string {
+  const result: string[] = [];
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (isImport(trimmed)) {
+      result.push(line);
+    } else if (isFunctionName(trimmed)) {
+      result.push(stripSignature(line));
+    }
+  }
+  return result.join("\n");
 }
 
 function summarizeJS(content: string, mode: "full" | "semi"): string {
@@ -91,14 +124,14 @@ function summarizeJS(content: string, mode: "full" | "semi"): string {
       /^(export\s+)?type\s+[A-Za-z_$]/.test(trimmed) ||
       /^(export\s+)?interface\s+[A-Za-z_$]/.test(trimmed) ||
       /^(export\s+)?(abstract\s+)?class\s+[A-Za-z_$]/.test(trimmed) ||
-      /^import\s/.test(trimmed);
+      isImport(trimmed);
 
     if (mode === "full") {
       if (isFullSig)
-        result.push(/^import\s/.test(trimmed) ? line : stripSignature(line));
+        result.push(isImport(trimmed) ? line : stripSignature(line));
     } else {
       if (isSemiSig(trimmed))
-        result.push(/^import\s/.test(trimmed) ? line : stripSignature(line));
+        result.push(isImport(trimmed) ? line : stripSignature(line));
     }
   }
   return result.join("\n");
@@ -126,6 +159,20 @@ function summarizeCSS(content: string, mode: "full" | "semi"): string {
   return result.join("\n");
 }
 
+function summarizeVueNames(content: string): string {
+  const result: string[] = [];
+  const scriptMatch = content.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+  if (scriptMatch) {
+    for (const line of scriptMatch[1].split("\n")) {
+      const trimmed = line.trim();
+      if (isImport(trimmed) || isFunctionName(trimmed)) {
+        result.push(isImport(trimmed) ? line : stripSignature(line));
+      }
+    }
+  }
+  return result.join("\n");
+}
+
 function summarizeVue(content: string, mode: "full" | "semi"): string {
   const scriptMatch = content.match(/<script[^>]*>([\s\S]*?)<\/script>/);
   const templateFirstLine = content.match(
@@ -142,9 +189,33 @@ function summarizeVue(content: string, mode: "full" | "semi"): string {
           : /^(export\s+)?(async\s+)?function\s+/.test(trimmed) ||
             /^(export\s+)?const\s+[A-Za-z_$]/.test(trimmed) ||
             /^(export\s+)?type\s+[A-Za-z_$]/.test(trimmed) ||
-            /^import\s/.test(trimmed);
-      if (check)
-        result.push(/^import\s/.test(trimmed) ? line : stripSignature(line));
+            isImport(trimmed);
+      if (check) result.push(isImport(trimmed) ? line : stripSignature(line));
+    }
+  }
+  return result.join("\n");
+}
+
+function summarizePythonNames(content: string): string {
+  const result: string[] = [];
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (
+      trimmed.startsWith("def ") ||
+      trimmed.startsWith("async def ") ||
+      trimmed.startsWith("class ") ||
+      trimmed.startsWith("import ") ||
+      trimmed.startsWith("from ")
+    ) {
+      const isFn =
+        trimmed.startsWith("def ") ||
+        trimmed.startsWith("async def ") ||
+        trimmed.startsWith("class ");
+      if (isFn) {
+        result.push(trimmed.replace(/\(.*/, "").replace(/:$/, "").trim());
+      } else {
+        result.push(trimmed);
+      }
     }
   }
   return result.join("\n");
@@ -172,7 +243,7 @@ function summarizePython(content: string, mode: "full" | "semi"): string {
   return result.join("\n");
 }
 
-function summarizeSQL(content: string, mode: "full" | "semi"): string {
+function summarizeSQL(content: string, _mode: "full" | "semi"): string {
   const lines = content.split("\n");
   const result: string[] = [];
   for (const line of lines) {

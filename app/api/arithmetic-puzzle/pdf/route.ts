@@ -100,7 +100,7 @@ async function drawAnswerKeyPages(pdfDoc: PDFDocument, puzzles: Puzzle[]) {
         (slotH - 20) / visRows,
         14,
       );
-      const fs = Math.max(5, cellSize - 4);
+      const fs = Math.max(4, cellSize - 6);
 
       const gridW = visCols * cellSize;
       const gridH = visRows * cellSize;
@@ -110,7 +110,7 @@ async function drawAnswerKeyPages(pdfDoc: PDFDocument, puzzles: Puzzle[]) {
       page.drawText(`#${pageStart + idx + 1}`, {
         x: startX,
         y: slotY - 2,
-        size: 7,
+        size: 6,
         font: fontSmall,
       });
 

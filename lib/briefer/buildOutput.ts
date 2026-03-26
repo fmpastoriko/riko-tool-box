@@ -75,7 +75,7 @@ export function buildOutput(
     if (fullContextFiles.has(f.path) || contextMode === "full") {
       body = f.content;
     } else if (contextMode === "off") {
-      body = summarizeFile(f.path, f.content, "names");
+      body = summarizeFile(f.path, f.content, "filename");
     } else if (contextMode === "names") {
       body = summarizeFile(f.path, f.content, "names");
     } else {

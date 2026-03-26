@@ -18,7 +18,12 @@ const localOnlyReason =
   "";
 type Repo = { label: string; path: string };
 type ZipEntry = { path: string; content: string; size: number };
-type BackupEntry = { backupPath: string; filePath: string; timestamp: number };
+type BackupEntry = {
+  backupPath: string;
+  filePath: string;
+  timestamp: number;
+  source: "ca" | "cb";
+};
 type ApplyResult = {
   path: string;
   ok: boolean;
@@ -75,6 +80,7 @@ export default function CodeApplierPage() {
   const [selectedBackups, setSelectedBackups] = useState<Map<string, string>>(
     new Map(),
   );
+  const [revertGroup, setRevertGroup] = useState<"ca" | "cb" | "all">("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
   const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier");
@@ -242,6 +248,7 @@ export default function CodeApplierPage() {
             repoPath: selectedRepo.path,
             filePath: entry.path,
             content: entry.content,
+            source: "ca",
           }),
         });
         const data = await res.json();
@@ -314,7 +321,16 @@ export default function CodeApplierPage() {
   }));
   const successCount = results.filter((r) => r.ok).length;
   const failCount = results.filter((r) => !r.ok).length;
-  const groupedBackups = groupBackupsByFile(backups);
+
+  const filteredBackups =
+    revertGroup === "all"
+      ? backups
+      : backups.filter((b) => b.source === revertGroup);
+  const groupedBackups = groupBackupsByFile(filteredBackups);
+
+  const caCount = backups.filter((b) => b.source === "ca").length;
+  const cbCount = backups.filter((b) => b.source === "cb").length;
+
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -577,7 +593,7 @@ export default function CodeApplierPage() {
           <Card
             title="Revert Changes"
             className="flex flex-col gap-3 flex-shrink-0 overflow-y-auto"
-            style={{ minWidth: 240, maxWidth: 280 }}
+            style={{ minWidth: 240, maxWidth: 300 }}
             headerRight={
               <button
                 onClick={loadBackups}
@@ -595,88 +611,138 @@ export default function CodeApplierPage() {
             {selectedRepo && backups.length === 0 && !loadingBackups && (
               <MonoText color="muted">No backups found in /tmp.</MonoText>
             )}
-            {selectedRepo && groupedBackups.size > 0 && (
+            {selectedRepo && backups.length > 0 && (
               <>
-                <MonoText color="muted">
-                  Pick a snapshot per file, then click Revert.
-                </MonoText>
-                <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                  {Array.from(groupedBackups.entries()).map(
-                    ([filePath, snapshots]) => {
-                      const selected = selectedBackups.get(filePath);
-                      return (
-                        <div key={filePath} className="space-y-1">
-                          <MonoText color="secondary" className="truncate">
-                            {filePath.split("/").pop()}
-                          </MonoText>
-                          <div className="space-y-0.5">
-                            {snapshots.map((snap, i) => {
-                              const isSelected = selected === snap.backupPath;
-                              return (
-                                <button
-                                  key={snap.backupPath}
-                                  onClick={() => {
-                                    setSelectedBackups((prev) => {
-                                      const next = new Map(prev);
-                                      if (isSelected) {
-                                        next.delete(filePath);
-                                      } else {
-                                        next.set(filePath, snap.backupPath);
-                                      }
-                                      return next;
-                                    });
-                                  }}
-                                  className="w-full text-left flex items-center gap-2 px-2 py-1 rounded text-xs font-mono transition-all"
-                                  style={{
-                                    background: isSelected
-                                      ? "var(--accent-dim)"
-                                      : "var(--bg)",
-                                    border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                                    color: isSelected
-                                      ? "var(--accent)"
-                                      : "var(--secondary)",
-                                  }}
-                                >
-                                  <span className="flex-1">
-                                    {i === 0 ? "latest" : `#${i + 1}`}
-                                  </span>
-                                  <span
-                                    style={{
-                                      color: "var(--muted)",
-                                      fontSize: 10,
-                                    }}
-                                  >
-                                    {new Date(
-                                      snap.timestamp,
-                                    ).toLocaleTimeString("en-GB", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      second: "2-digit",
-                                    })}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    },
-                  )}
+                <div className="flex gap-1 flex-shrink-0">
+                  {(["all", "ca", "cb"] as const).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setRevertGroup(g)}
+                      className="text-xs font-mono px-1.5 py-0.5 rounded border flex-1"
+                      style={{
+                        borderColor:
+                          revertGroup === g ? "var(--accent)" : "var(--border)",
+                        color:
+                          revertGroup === g ? "var(--accent)" : "var(--muted)",
+                        background:
+                          revertGroup === g
+                            ? "var(--accent-dim)"
+                            : "transparent",
+                      }}
+                    >
+                      {g === "all"
+                        ? `All (${backups.length})`
+                        : g === "ca"
+                          ? `Applier (${caCount})`
+                          : `Briefer (${cbCount})`}
+                    </button>
+                  ))}
                 </div>
-                <button
-                  onClick={handleRevert}
-                  disabled={applying || selectedBackups.size === 0}
-                  className="btn-primary text-xs justify-center flex-shrink-0"
-                  style={{
-                    opacity: applying || selectedBackups.size === 0 ? 0.6 : 1,
-                  }}
-                >
-                  {applying
-                    ? "Reverting…"
-                    : selectedBackups.size > 0
-                      ? `Revert (${selectedBackups.size})`
-                      : "Revert"}
-                </button>
+                {groupedBackups.size === 0 ? (
+                  <MonoText color="muted">No backups in this group.</MonoText>
+                ) : (
+                  <>
+                    <MonoText color="muted">
+                      Pick a snapshot per file, then click Revert.
+                    </MonoText>
+                    <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
+                      {Array.from(groupedBackups.entries()).map(
+                        ([filePath, snapshots]) => {
+                          const sel = selectedBackups.get(filePath);
+                          return (
+                            <div key={filePath} className="space-y-1">
+                              <MonoText color="secondary" className="truncate">
+                                {filePath}
+                              </MonoText>
+                              <div className="space-y-0.5">
+                                {snapshots.map((snap, i) => {
+                                  const isSelected = sel === snap.backupPath;
+                                  return (
+                                    <button
+                                      key={snap.backupPath}
+                                      onClick={() => {
+                                        setSelectedBackups((prev) => {
+                                          const next = new Map(prev);
+                                          if (isSelected) {
+                                            next.delete(filePath);
+                                          } else {
+                                            next.set(filePath, snap.backupPath);
+                                          }
+                                          return next;
+                                        });
+                                      }}
+                                      className="w-full text-left flex items-center gap-2 px-2 py-1 rounded text-xs font-mono transition-all"
+                                      style={{
+                                        background: isSelected
+                                          ? "var(--accent-dim)"
+                                          : "var(--bg)",
+                                        border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                                        color: isSelected
+                                          ? "var(--accent)"
+                                          : "var(--secondary)",
+                                      }}
+                                    >
+                                      <span className="flex-1">
+                                        {i === 0 ? "latest" : `#${i + 1}`}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1 rounded flex-shrink-0"
+                                        style={{
+                                          background:
+                                            snap.source === "cb"
+                                              ? "rgba(34,197,94,0.12)"
+                                              : "rgba(109,87,248,0.12)",
+                                          color:
+                                            snap.source === "cb"
+                                              ? "rgb(34,197,94)"
+                                              : "var(--accent)",
+                                          fontSize: 9,
+                                        }}
+                                      >
+                                        {snap.source === "cb"
+                                          ? "briefer"
+                                          : "applier"}
+                                      </span>
+                                      <span
+                                        style={{
+                                          color: "var(--muted)",
+                                          fontSize: 10,
+                                        }}
+                                      >
+                                        {new Date(
+                                          snap.timestamp,
+                                        ).toLocaleTimeString("en-GB", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          second: "2-digit",
+                                        })}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                    <button
+                      onClick={handleRevert}
+                      disabled={applying || selectedBackups.size === 0}
+                      className="btn-primary text-xs justify-center flex-shrink-0"
+                      style={{
+                        opacity:
+                          applying || selectedBackups.size === 0 ? 0.6 : 1,
+                      }}
+                    >
+                      {applying
+                        ? "Reverting…"
+                        : selectedBackups.size > 0
+                          ? `Revert (${selectedBackups.size})`
+                          : "Revert"}
+                    </button>
+                  </>
+                )}
               </>
             )}
           </Card>

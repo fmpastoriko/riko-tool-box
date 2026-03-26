@@ -228,7 +228,7 @@ export default function WordSearchPage() {
             label="Number of Puzzles"
             value={count}
             min={1}
-            max={10}
+            max={100}
             onChange={setCount}
           />
           <button

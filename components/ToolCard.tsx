@@ -68,7 +68,7 @@ export default function ToolCard({
       </div>
       <Link href={href} className="flex-1">
         <p
-          className="text-sm leading-relaxed"
+          className="text-sm leading-relaxed max-md:hidden"
           style={{ color: "var(--secondary)" }}
         >
           {description}

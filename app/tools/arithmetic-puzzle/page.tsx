@@ -271,7 +271,7 @@ export default function ArithmeticPuzzlePage() {
             label="Number of Puzzles"
             value={form.count}
             min={1}
-            max={20}
+            max={100}
             onChange={(v) => setForm((f) => ({ ...f, count: v }))}
           />
           <Card className="flex-shrink-0">

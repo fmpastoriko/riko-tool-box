@@ -5,16 +5,18 @@ import { requireLocal } from "@/lib/localGuard";
 import { validateFileWrite } from "@/lib/validateFileWrite";
 import { internalError } from "@/lib/apiUtils";
 import { runPrettier } from "@/lib/prettierFile";
+import { createBackup, BackupSource } from "@/lib/backupUtils";
 
 export async function POST(req: NextRequest) {
   const guard = requireLocal();
   if (guard) return guard;
 
   try {
-    const { repoPath, filePath, content } = (await req.json()) as {
+    const { repoPath, filePath, content, source } = (await req.json()) as {
       repoPath: string;
       filePath: string;
       content: string;
+      source?: BackupSource;
     };
 
     if (!repoPath || !filePath || content === undefined) {
@@ -28,15 +30,8 @@ export async function POST(req: NextRequest) {
     if ("error" in validated) return validated.error;
     const { abs } = validated;
 
-    const tmpDir = "/tmp/code-applier-backup";
-    fs.mkdirSync(tmpDir, { recursive: true });
-    const timestamp = Date.now();
-    const safeName = filePath.replace(/\//g, "!@#");
-    const backupPath = path.join(tmpDir, `${timestamp}_${safeName}`);
-
-    if (fs.existsSync(abs)) {
-      fs.copyFileSync(abs, backupPath);
-    }
+    const src: BackupSource = source === "cb" ? "cb" : "ca";
+    const backupPath = createBackup(abs, filePath, src);
 
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, content, "utf-8");

@@ -3,13 +3,31 @@ import fs from "fs";
 import path from "path";
 import { requireLocal } from "@/lib/localGuard";
 import { internalError } from "@/lib/apiUtils";
+import {
+  BACKUP_DIR,
+  MAX_BACKUPS_PER_FILE,
+  BackupSource,
+  BackupEntry,
+} from "@/lib/backupUtils";
 
-const BACKUP_DIR = "/tmp/code-applier-backup";
-
-export interface BackupEntry {
-  backupPath: string;
-  filePath: string;
-  timestamp: number;
+function walkBackups(dir: string, baseDir: string): BackupEntry[] {
+  const results: BackupEntry[] = [];
+  if (!fs.existsSync(dir)) return results;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...walkBackups(fullPath, baseDir));
+    } else {
+      const match = entry.name.match(/^(\d+)_(ca|cb)$/);
+      if (!match) continue;
+      const timestamp = parseInt(match[1], 10);
+      const source = match[2] as BackupSource;
+      const filePath = path.relative(baseDir, dir);
+      results.push({ backupPath: fullPath, filePath, timestamp, source });
+    }
+  }
+  return results;
 }
 
 export async function GET() {
@@ -21,24 +39,21 @@ export async function GET() {
       return NextResponse.json({ backups: [] });
     }
 
-    const files = fs.readdirSync(BACKUP_DIR);
-    const backups: BackupEntry[] = [];
-
-    for (const filename of files) {
-      const match = filename.match(/^(\d+)_(.+)$/);
-      if (!match) continue;
-      const timestamp = parseInt(match[1], 10);
-      const filePath = match[2].replace(/!@#/g, "/");
-      backups.push({
-        backupPath: path.join(BACKUP_DIR, filename),
-        filePath,
-        timestamp,
-      });
-    }
-
+    const backups = walkBackups(BACKUP_DIR, BACKUP_DIR);
     backups.sort((a, b) => b.timestamp - a.timestamp);
 
-    return NextResponse.json({ backups });
+    const perFile = new Map<string, BackupEntry[]>();
+    for (const b of backups) {
+      if (!perFile.has(b.filePath)) perFile.set(b.filePath, []);
+      const arr = perFile.get(b.filePath)!;
+      if (arr.length < MAX_BACKUPS_PER_FILE) arr.push(b);
+    }
+
+    const pruned: BackupEntry[] = [];
+    for (const arr of perFile.values()) pruned.push(...arr);
+    pruned.sort((a, b) => b.timestamp - a.timestamp);
+
+    return NextResponse.json({ backups: pruned });
   } catch {
     return internalError();
   }
