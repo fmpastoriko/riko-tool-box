@@ -22,7 +22,7 @@ import {
   loadDraft,
   saveDraft,
   clearDraft,
-  LAST_REPO_KEY
+  LAST_REPO_KEY,
 } from "@/lib/briefer/draft";
 import {
   buildAnalyticalSystemPrompt,
@@ -35,6 +35,7 @@ import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
 import Card from "@/components/Card";
 import TagButton from "@/components/TagButton";
+import StatusBadge from "@/components/StatusBadge";
 import MonoText from "@/components/MonoText";
 import ErrorText from "@/components/ErrorText";
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
@@ -49,7 +50,7 @@ type Template = {
 const CONTEXT_MODE_CYCLE: ContextMode[] = ["off", "names", "semi", "full"];
 const CONTEXT_MODE_LABELS: Record<ContextMode, string> = {
   off: "Context Off",
-  names: "Names Only",
+  names: "Min Context",
   semi: "Semi Context",
   full: "Full Context",
 };
@@ -1039,7 +1040,7 @@ export default function CodeBrieferPage() {
           <Card
             title="Prompt"
             className="flex-shrink-0"
-            headerRight={
+            headerLeft={
               <>
                 {templates.map((t) => (
                   <TagButton

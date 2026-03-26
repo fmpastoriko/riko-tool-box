@@ -28,7 +28,7 @@ export async function GET() {
       const match = filename.match(/^(\d+)_(.+)$/);
       if (!match) continue;
       const timestamp = parseInt(match[1], 10);
-      const filePath = match[2].replace(/_/g, "/");
+      const filePath = match[2].replace(/!@#/g, "/");
       backups.push({
         backupPath: path.join(BACKUP_DIR, filename),
         filePath,

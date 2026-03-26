@@ -1,9 +1,12 @@
 export const LAST_REPO_KEY = "codeBriefer_lastRepo";
-export const DRAFT_KEY = "codeBriefer_draft";
+
+function getDraftKey() {
+  return "codeBriefer_draft";
+}
 
 export function loadDraft(): Record<string, unknown> | null {
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
+    const raw = localStorage.getItem(getDraftKey());
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -12,12 +15,12 @@ export function loadDraft(): Record<string, unknown> | null {
 
 export function saveDraft(data: object): void {
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    localStorage.setItem(getDraftKey(), JSON.stringify(data));
   } catch {}
 }
 
 export function clearDraft(): void {
   try {
-    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(getDraftKey());
   } catch {}
 }

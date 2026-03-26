@@ -7,6 +7,7 @@ interface CardProps {
   style?: React.CSSProperties;
   onClick?: () => void;
   title?: string;
+  headerLeft?: React.ReactNode;
   headerRight?: React.ReactNode;
 }
 
@@ -16,6 +17,7 @@ export default function Card({
   style,
   onClick,
   title,
+  headerLeft,
   headerRight,
 }: CardProps) {
   return (
@@ -26,9 +28,16 @@ export default function Card({
     >
       {title && (
         <div className="flex items-center justify-between flex-shrink-0 gap-1">
-          <SectionLabel noMargin>{title}</SectionLabel>
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <SectionLabel noMargin>{title}</SectionLabel>
+            {headerLeft && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {headerLeft}
+              </div>
+            )}
+          </div>
           {headerRight && (
-            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
               {headerRight}
             </div>
           )}

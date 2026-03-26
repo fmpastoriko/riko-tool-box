@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const tmpDir = "/tmp/code-applier-backup";
     fs.mkdirSync(tmpDir, { recursive: true });
     const timestamp = Date.now();
-    const safeName = filePath.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const safeName = filePath.replace(/\//g, "!@#");
     const backupPath = path.join(tmpDir, `${timestamp}_${safeName}`);
 
     if (fs.existsSync(abs)) {

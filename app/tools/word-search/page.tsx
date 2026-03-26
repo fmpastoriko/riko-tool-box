@@ -4,7 +4,6 @@ import { generateWordSearches, type WordSearchPuzzle } from "@/lib/wordSearch";
 import ToolHeader from "@/components/ToolHeader";
 import PanelBox from "@/components/PanelBox";
 import { TOOLS_CONFIG } from "@/config/tools";
-import ToolOptionsPanel from "@/components/ToolOptionsPanel";
 import Slider from "@/components/Slider";
 import PuzzleNavigation from "@/components/PuzzleNavigation";
 import { downloadPdf } from "@/lib/downloadPdf";
@@ -38,7 +37,6 @@ export default function WordSearchPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loadingWords, setLoadingWords] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -76,7 +74,6 @@ export default function WordSearchPage() {
     }
     setError("");
     setLoadingWords(true);
-    setSaved(false);
     setRetryCount(0);
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
@@ -127,7 +124,6 @@ export default function WordSearchPage() {
             puzzles_json: JSON.stringify(generated),
           }),
         });
-        setSaved(true);
         setLoadingWords(false);
         abortRef.current = null;
         return;
@@ -201,8 +197,8 @@ export default function WordSearchPage() {
           <HistoryButton href="/tools/word-search/history" />
         </div>
       </div>
-      <div className="flex gap-4 flex-1 min-h-0 flex-col lg:flex-row">
-        <ToolOptionsPanel>
+      <div className="flex gap-4 flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3">
           <Card title="Topic (Bahasa Indonesia)" className="flex-shrink-0">
             <input
               type="text"
@@ -247,7 +243,18 @@ export default function WordSearchPage() {
                 : "Generating words..."
               : "Generate"}
           </button>
-        </ToolOptionsPanel>
+          {error && <ErrorText>{error}</ErrorText>}
+          <button
+            onClick={handleDownload}
+            disabled={puzzles.length === 0 || downloading}
+            className="btn-ghost text-xs font-mono flex-shrink-0 justify-center lg:hidden"
+            style={{ opacity: puzzles.length === 0 ? 0.5 : 1 }}
+          >
+            {downloading
+              ? "Downloading..."
+              : `Download PDF${puzzles.length > 1 ? ` (${puzzles.length})` : ""}`}
+          </button>
+        </div>
         <PanelBox
           title={`Preview${puzzles.length > 0 ? ` (${currentIndex + 1} / ${puzzles.length})` : ""}`}
           headerRight={
@@ -260,7 +267,7 @@ export default function WordSearchPage() {
               downloading={downloading}
             />
           }
-          className="flex-1 min-h-0 overflow-auto"
+          className="flex-1 min-h-0 overflow-auto hidden lg:flex"
         >
           {error ? (
             <div className="flex items-center justify-center h-full">

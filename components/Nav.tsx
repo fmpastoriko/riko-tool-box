@@ -45,7 +45,12 @@ export default function Nav() {
     <>
       <nav
         className="sticky top-0 z-50 border-b"
-        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+        style={{
+          background: "var(--surface)",
+          borderColor: "var(--border)",
+          maxWidth: "100vw",
+          overflowX: "hidden",
+        }}
       >
         <div className="w-full px-4 sm:px-6 h-14 flex items-center gap-2">
           <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
@@ -71,10 +76,10 @@ export default function Nav() {
             ))}
           </div>
 
-          <div className="flex-1 flex items-center justify-center px-4">
+          <div className="flex-1 min-w-0 flex items-center justify-center px-2">
             {showBanner && (
               <p
-                className="hidden sm:block text-xs font-mono text-center"
+                className="hidden sm:block text-xs font-mono text-center truncate"
                 style={{ color: "rgb(239,68,68)" }}
               >
                 {DEMO_MSG}

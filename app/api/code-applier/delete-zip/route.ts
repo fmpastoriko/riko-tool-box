@@ -5,7 +5,7 @@ import { requireLocal } from "@/lib/localGuard";
 import { internalError } from "@/lib/apiUtils";
 
 const ALLOWED_DIR = process.env.DOWNLOADS_DIR ?? "/home/hana/Downloads";
-const SAFE_FILENAME_RE = /^[a-zA-Z0-9_.\-]+$/;
+const SAFE_FILENAME_RE = /^[a-zA-Z0-9_.!@#()-]+$/;
 
 export async function DELETE(req: NextRequest) {
   const guard = requireLocal();

@@ -13,14 +13,18 @@ interface PanelBoxProps {
 export default function PanelBox({
   title,
   headerRight,
-  className = "",
+  className,
   children,
 }: PanelBoxProps) {
+  const combinedClassName = className
+    ? `flex-1 flex flex-col min-h-0 ${className}`
+    : "flex-1 flex flex-col min-h-0";
+
   return (
     <Card
       title={title}
       headerRight={headerRight}
-      className={`flex-1 flex flex-col min-h-0 ${className}`}
+      className={combinedClassName}
     >
       {children}
     </Card>

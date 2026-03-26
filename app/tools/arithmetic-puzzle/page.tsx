@@ -10,7 +10,6 @@ import {
 import ToolHeader from "@/components/ToolHeader";
 import PanelBox from "@/components/PanelBox";
 import { TOOLS_CONFIG } from "@/config/tools";
-import ToolOptionsPanel from "@/components/ToolOptionsPanel";
 import Slider from "@/components/Slider";
 import PuzzleNavigation from "@/components/PuzzleNavigation";
 import { downloadPdf } from "@/lib/downloadPdf";
@@ -67,7 +66,6 @@ export default function ArithmeticPuzzlePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const pdfPreviewRef = useRef<HTMLIFrameElement>(null);
@@ -120,7 +118,6 @@ export default function ArithmeticPuzzlePage() {
   const handleGenerate = useCallback(async () => {
     setError("");
     setGenerating(true);
-    setSaved(false);
     try {
       const opts: PuzzleOptions = {
         operators: form.operators,
@@ -142,7 +139,6 @@ export default function ArithmeticPuzzlePage() {
           puzzles_json: JSON.stringify(generated),
         }),
       });
-      setSaved(true);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Generation failed. Try again.",
@@ -200,8 +196,8 @@ export default function ArithmeticPuzzlePage() {
           <HistoryButton href="/tools/arithmetic-puzzle/history" />
         </div>
       </div>
-      <div className="flex gap-4 flex-1 min-h-0 flex-col lg:flex-row">
-        <ToolOptionsPanel>
+      <div className="flex gap-4 flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3">
           <Card title="Operators" className="flex-shrink-0">
             <div className="flex gap-2 flex-wrap mt-1">
               {ALL_OPERATORS.map((op) => (
@@ -303,7 +299,18 @@ export default function ArithmeticPuzzlePage() {
           >
             {generating ? "Generating..." : "Generate"}
           </button>
-        </ToolOptionsPanel>
+          {error && <ErrorText>{error}</ErrorText>}
+          <button
+            onClick={handleDownload}
+            disabled={puzzles.length === 0 || downloading}
+            className="btn-ghost text-xs font-mono flex-shrink-0 justify-center lg:hidden"
+            style={{ opacity: puzzles.length === 0 ? 0.5 : 1 }}
+          >
+            {downloading
+              ? "Downloading..."
+              : `Download PDF${puzzles.length > 1 ? ` (${puzzles.length})` : ""}`}
+          </button>
+        </div>
         <PanelBox
           title={`Preview${puzzles.length > 0 ? ` (${currentIndex + 1} / ${puzzles.length})` : ""}`}
           headerRight={
@@ -316,7 +323,7 @@ export default function ArithmeticPuzzlePage() {
               downloading={downloading}
             />
           }
-          className="flex-1 min-h-0 overflow-auto"
+          className="flex-1 min-h-0 overflow-auto hidden lg:flex"
         >
           {error ? (
             <EmptyState>

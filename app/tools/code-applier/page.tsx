@@ -8,7 +8,6 @@ import { ALLOWED_WRITE_EXTS } from "@/config/fileExtensions";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
 import ToolOptionsPanel from "@/components/ToolOptionsPanel";
-import { formatDate } from "@/lib/formatDate";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 import ErrorText from "@/components/ErrorText";
@@ -111,7 +110,7 @@ export default function CodeApplierPage() {
     setResults([]);
     setApplied(false);
     setZipName("");
-    setPickedFilenames([]);
+    setPickedFilenames([file.name]);
     setPasteText("");
     setPasteError("");
     setShowTextInput(false);
@@ -316,6 +315,31 @@ export default function CodeApplierPage() {
   const successCount = results.filter((r) => r.ok).length;
   const failCount = results.filter((r) => !r.ok).length;
   const groupedBackups = groupBackupsByFile(backups);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  if (isMobile) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-center px-6">
+        <div>
+          <p className="text-2xl mb-3">💻</p>
+          <p className="font-mono text-sm" style={{ color: "var(--primary)" }}>
+            Not optimized for phone.
+          </p>
+          <p
+            className="font-mono text-xs mt-1"
+            style={{ color: "var(--muted)" }}
+          >
+            Open at computer.
+          </p>
+        </div>
+      </div>
+    );
+  }
   if (!isLocal) {
     return (
       <div className="flex-1 flex flex-col gap-4">

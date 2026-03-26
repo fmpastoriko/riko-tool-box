@@ -9,14 +9,14 @@ export async function GET(req: NextRequest) {
 
     if (owner) {
       const rows =
-        await neonDb`SELECT id, title, repo_path, model, created_at FROM chat_sessions WHERE user_id = ${ownerUserId} ORDER BY created_at DESC LIMIT 10`;
+        await neonDb`SELECT id, title, repo_path, model, created_at FROM chat_sessions WHERE user_id = ${ownerUserId} ORDER BY created_at DESC LIMIT 30`;
       return NextResponse.json({ sessions: rows });
     }
 
     const rows = await neonDb`
       SELECT id, title, repo_path, model, created_at FROM chat_sessions
       WHERE user_id = ${hashedIp}
-      ORDER BY created_at DESC LIMIT 10
+      ORDER BY created_at DESC LIMIT 30
     `;
     return NextResponse.json({ sessions: rows });
   } catch {
@@ -37,9 +37,16 @@ export async function POST(req: NextRequest) {
       VALUES (${safeTitle}, ${repo_path ?? null}, ${model ?? null}, ${userId})
       RETURNING id, title, repo_path, model, created_at
     `;
-    if (owner) {
-      await neonDb`DELETE FROM chat_sessions WHERE id NOT IN (SELECT id FROM chat_sessions ORDER BY created_at DESC LIMIT 10)`;
-    }
+    await neonDb`
+      DELETE FROM chat_sessions
+      WHERE user_id = ${userId}
+      AND id NOT IN (
+        SELECT id FROM chat_sessions
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+        LIMIT 30
+      )
+    `;
     return NextResponse.json({ session });
   } catch {
     return internalError();
