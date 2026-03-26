@@ -99,10 +99,7 @@ export default function ToolsLayout({
         </div>
       </div>
 
-      <div
-        className="sm:hidden flex flex-col px-4 pt-4"
-        style={{ height: "calc(100vh - 3.5rem)" }}
-      >
+      <div className="sm:hidden flex flex-col flex-1 min-h-0 px-4 pt-4 overflow-y-auto">
         {children}
       </div>
     </>

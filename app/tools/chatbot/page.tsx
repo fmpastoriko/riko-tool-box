@@ -28,6 +28,8 @@ const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
 type Repo = { label: string; path: string };
 
+const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/chatbot")!;
+
 function ChatbotInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -70,7 +72,6 @@ function ChatbotInner() {
   const sessionStarted = !!activeSession;
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
-  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/chatbot");
 
   useEffect(() => {
     if (userScrolledUp) return;
@@ -476,9 +477,9 @@ function ChatbotInner() {
               </svg>
             </button>
             <ToolHeader
-              title="Chatbot"
-              subtitle="Chat with a local or hosted LLM."
-              mediumUrl={toolConfig?.mediumUrl}
+              title={toolConfig.label}
+              subtitle={toolConfig.shortDescription}
+              mediumUrl={toolConfig.mediumUrl}
             />
           </div>
 

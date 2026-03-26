@@ -227,6 +227,8 @@ async function autoSave(textA: string, textB: string): Promise<string | null> {
   }
 }
 
+const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/text-compare")!;
+
 export default function TextComparePage() {
   return (
     <Suspense>
@@ -262,8 +264,6 @@ function TextCompareInner() {
     };
   }, [left, right]);
 
-  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/text-compare");
-
   const diffHeaderRight = (
     <>
       {left && right && (
@@ -296,9 +296,9 @@ function TextCompareInner() {
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
         <ToolHeader
-          title="Text Compare"
-          subtitle="Myers diff; side-by-side with inline character highlighting."
-          mediumUrl={toolConfig?.mediumUrl}
+          title={toolConfig.label}
+          subtitle={toolConfig.shortDescription}
+          mediumUrl={toolConfig.mediumUrl}
         />
         <HistoryButton href="/tools/text-compare/history" />
       </div>

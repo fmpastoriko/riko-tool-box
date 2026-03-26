@@ -186,7 +186,7 @@ export default function WordSearchPage() {
       <div className="flex items-start justify-between flex-shrink-0">
         <ToolHeader
           title={toolConfig.label}
-          subtitle={toolConfig.description}
+          subtitle={toolConfig.shortDescription}
           mediumUrl={toolConfig.mediumUrl}
         />
         <div className="flex gap-2">

@@ -12,10 +12,9 @@ import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 import ErrorText from "@/components/ErrorText";
 import MonoText from "@/components/MonoText";
+import MobileNotOptimized from "@/components/MobileNotOptimized";
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
-const localOnlyReason =
-  TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier")?.localOnlyReason ??
-  "";
+const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier")!;
 type Repo = { label: string; path: string };
 type ZipEntry = { path: string; content: string; size: number };
 type BackupEntry = {
@@ -83,7 +82,13 @@ export default function CodeApplierPage() {
   const [revertGroup, setRevertGroup] = useState<"ca" | "cb" | "all">("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
-  const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-applier");
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   useEffect(() => {
     if (!isLocal) return;
     fetch("/api/code-briefer/files")
@@ -321,48 +326,24 @@ export default function CodeApplierPage() {
   }));
   const successCount = results.filter((r) => r.ok).length;
   const failCount = results.filter((r) => !r.ok).length;
-
   const filteredBackups =
     revertGroup === "all"
       ? backups
       : backups.filter((b) => b.source === revertGroup);
   const groupedBackups = groupBackupsByFile(filteredBackups);
-
   const caCount = backups.filter((b) => b.source === "ca").length;
   const cbCount = backups.filter((b) => b.source === "cb").length;
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
   if (isMobile) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-center px-6">
-        <div>
-          <p className="text-2xl mb-3">💻</p>
-          <p className="font-mono text-sm" style={{ color: "var(--primary)" }}>
-            Not optimized for phone.
-          </p>
-          <p
-            className="font-mono text-xs mt-1"
-            style={{ color: "var(--muted)" }}
-          >
-            Open at computer.
-          </p>
-        </div>
-      </div>
-    );
+    return <MobileNotOptimized />;
   }
   if (!isLocal) {
     return (
       <div className="flex-1 flex flex-col gap-4">
         <ToolHeader
-          title="Code Applier"
-          subtitle="Apply zip file contents directly to a local repo with auto-formatting."
-          mediumUrl={toolConfig?.mediumUrl}
+          title={toolConfig.label}
+          subtitle={toolConfig.shortDescription}
+          mediumUrl={toolConfig.mediumUrl}
         />
         <Card
           style={{
@@ -370,7 +351,7 @@ export default function CodeApplierPage() {
             background: "rgba(239,68,68,0.04)",
           }}
         >
-          <ErrorText>{localOnlyReason}</ErrorText>
+          <ErrorText>{toolConfig.localOnlyReason}</ErrorText>
         </Card>
       </div>
     );
@@ -379,9 +360,9 @@ export default function CodeApplierPage() {
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
         <ToolHeader
-          title="Code Applier"
-          subtitle="Apply zip file contents directly to a local repo with auto-formatting."
-          mediumUrl={toolConfig?.mediumUrl}
+          title={toolConfig.label}
+          subtitle={toolConfig.shortDescription}
+          mediumUrl={toolConfig.mediumUrl}
         />
       </div>
       <div className="flex-1 flex gap-4 min-h-0">

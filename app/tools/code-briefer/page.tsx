@@ -38,6 +38,7 @@ import TagButton from "@/components/TagButton";
 import StatusBadge from "@/components/StatusBadge";
 import MonoText from "@/components/MonoText";
 import ErrorText from "@/components/ErrorText";
+import MobileNotOptimized from "@/components/MobileNotOptimized";
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 type FileEntry = { path: string; size: number };
 type Template = {
@@ -782,29 +783,14 @@ export default function CodeBrieferPage() {
     });
   }
   if (isMobile) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-center px-6">
-        <div>
-          <p className="text-2xl mb-3">💻</p>
-          <p className="font-mono text-sm" style={{ color: "var(--primary)" }}>
-            Not optimized for phone.
-          </p>
-          <p
-            className="font-mono text-xs mt-1"
-            style={{ color: "var(--muted)" }}
-          >
-            Open at computer.
-          </p>
-        </div>
-      </div>
-    );
+    return <MobileNotOptimized />;
   }
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4">
       <div className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
         <ToolHeader
-          title="Code Briefer"
-          subtitle="Join code files, prepend a prompt, ship to any LLM."
+          title={toolConfig!.label}
+          subtitle={toolConfig!.shortDescription}
           mediumUrl={toolConfig?.mediumUrl}
         />
         <HistoryButton href="/tools/code-briefer/history" />
