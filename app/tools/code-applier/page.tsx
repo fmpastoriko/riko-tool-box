@@ -34,11 +34,12 @@ function parsePastedText(text: string): ZipEntry[] {
   const blockRegex = /^([^\n]+)\n```[^\n]*\n([\s\S]*?)```/gm;
   let match;
   while ((match = blockRegex.exec(text)) !== null) {
-    const rawName = match[1].trim();
+    const rawName = match[1].trim().replace(/\*\*/g, "");
     const content = match[2];
     const hasPathMarker = rawName.includes("!@#");
-    const cleanName = hasPathMarker ? rawName.replace(/!@#/g, "/") : rawName;
-    const derivedPath = hasPathMarker ? cleanName : rawName;
+    const derivedPath = hasPathMarker
+      ? rawName.replace(/!@#/g, "/")
+      : rawName;
     if (!derivedPath) continue;
     const ext = "." + derivedPath.split(".").pop()!.toLowerCase();
     if (!ALLOWED_WRITE_EXTS.has(ext)) continue;
@@ -132,8 +133,9 @@ export default function CodeApplierPage() {
         Object.entries(zip.files).map(async ([rawPath, zipEntry]) => {
           if (zipEntry.dir) return;
           const filename = rawPath.split("/").pop() ?? rawPath;
-          const strippedPath = filename.includes("!@#")
-            ? filename.replace(/!@#/g, "/")
+          const filenameNoStars = filename.replace(/\*\*/g, "");
+          const strippedPath = filenameNoStars.includes("!@#")
+            ? filenameNoStars.replace(/!@#/g, "/")
             : (() => {
                 const parts = rawPath.split("/");
                 return parts.length > 1 ? parts.slice(1).join("/") : rawPath;
@@ -173,7 +175,7 @@ export default function CodeApplierPage() {
     const newEntries: ZipEntry[] = [];
     await Promise.all(
       files.map(async (file) => {
-        const filename = file.name;
+        const filename = file.name.replace(/\*\*/g, "");
         const derivedPath = filename.includes("!@#")
           ? filename.replace(/!@#/g, "/")
           : filename;

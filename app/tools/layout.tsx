@@ -1,13 +1,10 @@
 "use client";
-
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { TOOLS_CONFIG } from "@/config/tools";
-
 const SIDEBAR_WIDTH = 180;
 const TAB_WIDTH = 18;
-
 export default function ToolsLayout({
   children,
 }: {
@@ -15,12 +12,10 @@ export default function ToolsLayout({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(true);
-
   const toolPaths = TOOLS_CONFIG.map((t) => t.href);
   const isHistory =
     pathname.includes("/history") ||
     (!toolPaths.some((h) => pathname === h) && pathname !== "/tools");
-
   return (
     <>
       <div
@@ -64,7 +59,6 @@ export default function ToolsLayout({
             })}
           </div>
         </div>
-
         <button
           onClick={() => setOpen((v) => !v)}
           className="fixed top-1/2 -translate-y-1/2 z-50 flex items-center justify-center flex-shrink-0"
@@ -89,7 +83,6 @@ export default function ToolsLayout({
         >
           {open ? "✕" : "⇢"}
         </button>
-
         <div
           className="flex-1 min-w-0 px-6 py-6 flex flex-col"
           style={{
@@ -100,10 +93,7 @@ export default function ToolsLayout({
           {children}
         </div>
       </div>
-
-      <div className="sm:hidden flex flex-col flex-1 min-h-0 px-4 pt-4 overflow-y-auto">
-        {children}
-      </div>
+      <div className="sm:hidden flex flex-col px-4 pt-4 pb-6">{children}</div>
     </>
   );
 }

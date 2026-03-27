@@ -3,13 +3,11 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 import { LightboxProvider } from "@/lib/lightbox";
 import Providers from "@/components/Providers";
-
 export const metadata: Metadata = {
   title: "Riko's Toolbox",
   description:
     "Riko's Toolbox: Interactive tools built by Fransiskus Magnis Pastoriko.",
 };
-
 export default function RootLayout({
   children,
 }: {
@@ -29,7 +27,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-screen flex flex-col">
+      <body
+        suppressHydrationWarning
+        className="min-h-screen flex flex-col sm:overflow-hidden overflow-y-auto"
+      >
         <Providers>
           <LightboxProvider>
             <Nav />

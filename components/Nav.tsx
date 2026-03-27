@@ -1,16 +1,13 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import ThemeToggle from "./ThemeToggle";
 import AuthButton from "./AuthButton";
-
 const internalLinks = [
   { href: "/", label: "Home" },
   { href: "/tools", label: "Tools" },
 ];
-
 const externalLinks = [
   {
     href: "https://github.com/fmpastoriko",
@@ -27,20 +24,15 @@ const externalLinks = [
     variant: "primary" as const,
   },
 ];
-
 const shared =
   "inline-flex items-center font-sans font-medium text-sm leading-none rounded-lg transition-all duration-150 whitespace-nowrap";
-
 const DEMO_MSG =
   "Demo mode: Do not enter sensitive information. Sessions are stored by IP and visible to anyone with the session ID.";
-
 const DEMO_MSG_PHONE = "Demo mode: Don't enter sensitive info.";
-
 export default function Nav() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const showBanner = status !== "loading" && !session;
-
   return (
     <>
       <nav
@@ -75,7 +67,6 @@ export default function Nav() {
               </Link>
             ))}
           </div>
-
           <div className="flex-1 min-w-0 flex items-center justify-center px-2">
             {showBanner && (
               <p
@@ -86,7 +77,6 @@ export default function Nav() {
               </p>
             )}
           </div>
-
           <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
             {externalLinks.map((l) => {
               const vis = l.mobileHidden
@@ -111,19 +101,17 @@ export default function Nav() {
               );
             })}
           </div>
-
           <div className="hidden sm:flex">
             <AuthButton />
           </div>
           <ThemeToggle />
         </div>
       </nav>
-
       {showBanner && (
         <div
           className="sm:hidden sticky top-14 z-40 flex items-center px-4 py-2 border-b"
           style={{
-            background: "rgba(239,68,68,0.06)",
+            background: "var(--surface)",
             borderColor: "rgba(239,68,68,0.25)",
           }}
         >
