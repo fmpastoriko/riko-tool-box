@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
 import type { CrosswordPuzzle, CrosswordPlacement } from "@/lib/crosswordPuzzle";
 import { sendPdfResponse } from "@/lib/pdfUtils";
-import { A4_W, A4_H, MARGIN } from "@/lib/pdfLayout";
+import {
+  A4_W,
+  A4_H,
+  MARGIN,
+  ANSWER_KEY_PER_ROW,
+  ANSWER_KEY_PER_COL,
+  getAnswerKeyLayout,
+} from "@/lib/pdfLayout";
 
 function wrapText(font: PDFFont, text: string, size: number, maxW: number): string[] {
   const words = text.split(/\s+/);
@@ -128,6 +135,82 @@ function drawClueColumn(
   return y;
 }
 
+async function drawAnswerKeyPages(
+  pdfDoc: PDFDocument,
+  puzzles: CrosswordPuzzle[],
+): Promise<void> {
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const PER_PAGE = ANSWER_KEY_PER_ROW * ANSWER_KEY_PER_COL;
+  const { slotW, slotH } = getAnswerKeyLayout();
+
+  for (let pageStart = 0; pageStart < puzzles.length; pageStart += PER_PAGE) {
+    const page = pdfDoc.addPage([A4_W, A4_H]);
+    page.drawText("Answer Key", {
+      x: MARGIN,
+      y: A4_H - MARGIN + 4,
+      size: 10,
+      font,
+    });
+
+    const batch = puzzles.slice(pageStart, pageStart + PER_PAGE);
+    for (let idx = 0; idx < batch.length; idx++) {
+      const puzzle = batch[idx];
+      const col = idx % ANSWER_KEY_PER_ROW;
+      const row = Math.floor(idx / ANSWER_KEY_PER_ROW);
+
+      const slotX = MARGIN + col * slotW;
+      const slotY = A4_H - MARGIN - 16 - row * slotH;
+
+      const { grid, width, height } = puzzle;
+
+      const cellSize = Math.min(
+        (slotW - 8) / width,
+        (slotH - 20) / height,
+        14,
+      );
+      const fs = Math.max(4, cellSize - 6);
+      const gridW = cellSize * width;
+      const startX = slotX + (slotW - gridW) / 2;
+      const startY = slotY - 14;
+
+      page.drawText(`#${pageStart + idx + 1}`, {
+        x: startX,
+        y: slotY - 2,
+        size: 7,
+        font: fontReg,
+      });
+
+      for (let r = 0; r < height; r++) {
+        for (let c = 0; c < width; c++) {
+          const letter = grid[r][c];
+          if (letter === null) continue;
+          const x = startX + c * cellSize;
+          const y = startY - r * cellSize - cellSize;
+          page.drawRectangle({
+            x,
+            y,
+            width: cellSize,
+            height: cellSize,
+            borderColor: rgb(0.2, 0.2, 0.2),
+            borderWidth: 0.4,
+            color: rgb(0.8, 0.9, 1),
+          });
+          const tw = font.widthOfTextAtSize(letter, fs);
+          page.drawText(letter, {
+            x: x + (cellSize - tw) / 2,
+            y: y + (cellSize - fs) / 2 + 1,
+            size: fs,
+            font,
+            color: rgb(0, 0.3, 0.8),
+          });
+        }
+      }
+    }
+  }
+}
+
 async function drawPuzzlePage(
   pdfDoc: PDFDocument,
   puzzle: CrosswordPuzzle,
@@ -198,9 +281,7 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < puzzles.length; i++) {
     await drawPuzzlePage(pdfDoc, puzzles[i], i, puzzles.length, false);
   }
-  for (let i = 0; i < puzzles.length; i++) {
-    await drawPuzzlePage(pdfDoc, puzzles[i], i, puzzles.length, true);
-  }
+  await drawAnswerKeyPages(pdfDoc, puzzles);
 
   return sendPdfResponse(pdfDoc, "crosswords.pdf");
 }
