@@ -5,6 +5,7 @@ export type ToolIconName =
   | "codeapplier"
   | "arithmeticpuzzle"
   | "wordsearch"
+  | "crossword"
   | "comingsoon";
 
 export interface ToolConfig {
@@ -92,6 +93,16 @@ export const TOOLS_CONFIG: ToolConfig[] = [
       "Generate printable Indonesian word search puzzles by topic. AI generates contextually relevant words via Groq, placed on a grid with backtracking. Download as PDF with answer key.",
     shortDescription: "Generate printable Indonesian word search puzzles.",
     demonstrates: ["Groq AI", "Backtracking", "PDFKit", "DB"],
+  },
+  {
+    href: "/tools/crosswords",
+    label: "Crosswords",
+    icon: "crossword",
+    highlight: true,
+    description:
+      "Generate Indonesian crossword puzzles. Pick a topic, difficulty, and word count; the LLM picks words plus clues and a backtracking solver lays them out on a grid. Download as PDF with answer key.",
+    shortDescription: "Generate printable Indonesian crossword puzzles.",
+    demonstrates: ["LLM clue gen", "Backtracking", "pdf-lib"],
   },
 ];
 

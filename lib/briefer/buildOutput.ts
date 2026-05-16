@@ -1,6 +1,38 @@
 import { summarizeFile } from "@/lib/summarize";
 import { buildWarningsBlock } from "@/lib/briefer/llmPrompts";
 
+const CAVEMAN_RULES =
+  "---\n" +
+  "name: caveman\n" +
+  "description: >\n" +
+  "  Ultra-compressed communication mode. Cuts token usage ~75% by speaking like caveman\n" +
+  "  while keeping full technical accuracy. Supports intensity levels: lite, full (default), ultra,\n" +
+  "  wenyan-lite, wenyan-full, wenyan-ultra.\n" +
+  '  Use when user says "caveman mode", "talk like caveman", "use caveman", "less tokens",\n' +
+  '  "be brief", or invokes /caveman. Also auto-triggers when token efficiency is requested.\n' +
+  "---\n\n" +
+  "Respond terse like smart caveman. All technical substance stay. Only fluff die.\n\n" +
+  "## Persistence\n\n" +
+  'ACTIVE EVERY RESPONSE. No revert after many turns. No filler drift. Still active if unsure. Off only: "stop caveman" / "normal mode".\n\n' +
+  "Default: **full**. Switch: `/caveman lite|full|ultra`.\n\n" +
+  "## Rules\n\n" +
+  'Drop: articles (a/an/the), filler (just/really/basically/actually/simply), pleasantries (sure/certainly/of course/happy to), hedging. Fragments OK. Short synonyms (big not extensive, fix not "implement a solution for"). Technical terms exact. Code blocks unchanged. Errors quoted exact.\n\n' +
+  "Pattern: `[thing] [action] [reason]. [next step].`\n\n" +
+  "Not: \"Sure! I'd be happy to help you with that. The issue you're experiencing is likely caused by...\"\n" +
+  'Yes: "Bug in auth middleware. Token expiry check use `<` not `<=`. Fix:"\n\n' +
+  "## Intensity\n\n" +
+  "| Level | What change |\n" +
+  "|-------|------------|\n" +
+  "| **lite** | No filler/hedging. Keep articles + full sentences. Professional but tight |\n" +
+  "| **full** | Drop articles, fragments OK, short synonyms. Classic caveman |\n" +
+  "| **ultra** | Abbreviate (DB/auth/config/req/res/fn/impl), strip conjunctions, arrows for causality (X -> Y), one word when one word enough |\n\n" +
+  "## Auto-Clarity\n\n" +
+  "Drop caveman for: security warnings, irreversible action confirmations, multi-step sequences where fragment order risks misread. Resume caveman after clear part done.\n\n" +
+  "## Boundaries\n\n" +
+  'Code/commits/PRs: write normal. "stop caveman" or "normal mode": revert.';
+
+const REVIEW_REMINDER = "REVIEW YOUR OUTPUT FIRST BEFORE PRESENTING IT TO ME";
+
 const FOOTER_APPEND =
   "DO NOT ADD ANY COMMENTS.\n\n" +
   "IF THIS FILE IS A SUMMARY ONLY, ASK FOR COMPLETE CODES IF YOU NEED THEM.\n\n" +
@@ -21,10 +53,14 @@ const FOOTER_APPEND =
   "If you are in doubt, always ask me first, do not assume.\n\n" +
   "Do not make up non-existent problems for the sake of feedback. If the code is good enough, say so.\n\n" +
   "Always keep in mind the security, efficiency/performance, and cost (money) of the changes you make.\n\n" +
-  "SERIOUSLY, DO NOT USE M-DASH.";
+  "SERIOUSLY, DO NOT USE M-DASH.\n\n" +
+  CAVEMAN_RULES +
+  "\n\n" +
+  REVIEW_REMINDER;
 
 const FOOTER_DEFAULT =
-  'THIS IS A MUST: DON\'T START CODING UNLESS I SAY "Start Coding"';
+  'THIS IS A MUST: DON\'T START CODING UNLESS I SAY "Start Coding"\n\n' +
+  REVIEW_REMINDER;
 
 export const DEFAULT_PROMPT = "This is the code";
 
@@ -38,7 +74,7 @@ export function buildOutput(
   prompt: string,
   additionalPrompt: string,
   files: { path: string; content: string }[],
-  footerMode: "full" | "none" | "default2" | "change",
+  footerMode: "full" | "none" | "default2" | "change" | "default1",
   fullContextFiles: Set<string>,
   contextMode: ContextMode = "full",
 ): string {
@@ -54,6 +90,9 @@ export function buildOutput(
     parts.push("");
   } else if (footerMode === "default2") {
     parts.push(FOOTER_DEFAULT);
+    parts.push("");
+  } else if (footerMode === "default1") {
+    parts.push(REVIEW_REMINDER);
     parts.push("");
   }
 

@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     fs.writeFileSync(abs, updated, "utf-8");
     const prettified = runPrettier(abs, repoPath);
-    return prettifiedResponse(prettified !== null && prettified !== undefined);
+    return prettifiedResponse(prettified);
   } catch {
     return internalError();
   }

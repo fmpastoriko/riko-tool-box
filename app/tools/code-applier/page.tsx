@@ -37,9 +37,7 @@ function parsePastedText(text: string): ZipEntry[] {
     const rawName = match[1].trim().replace(/\*\*/g, "");
     const content = match[2];
     const hasPathMarker = rawName.includes("!@#");
-    const derivedPath = hasPathMarker
-      ? rawName.replace(/!@#/g, "/")
-      : rawName;
+    const derivedPath = hasPathMarker ? rawName.replace(/!@#/g, "/") : rawName;
     if (!derivedPath) continue;
     const ext = "." + derivedPath.split(".").pop()!.toLowerCase();
     if (!ALLOWED_WRITE_EXTS.has(ext)) continue;
@@ -60,6 +58,91 @@ function groupBackupsByFile(
   }
   return map;
 }
+
+interface NewFolderModalProps {
+  repoPath: string;
+  newFolders: string[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function NewFolderModal({
+  repoPath,
+  newFolders,
+  onConfirm,
+  onCancel,
+}: NewFolderModalProps) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9000,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 16,
+          width: "100%",
+          maxWidth: 480,
+          padding: "1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <p className="section-label mb-1">New Folders Detected</p>
+          <p className="text-sm" style={{ color: "var(--secondary)" }}>
+            The following folders do not exist in{" "}
+            <span
+              className="font-mono text-xs"
+              style={{ color: "var(--accent)" }}
+            >
+              {repoPath}
+            </span>{" "}
+            and will be created:
+          </p>
+        </div>
+        <div
+          className="rounded-lg p-3 space-y-1"
+          style={{ background: "var(--bg)", border: "1px solid var(--border)" }}
+        >
+          {newFolders.map((f) => (
+            <p
+              key={f}
+              className="text-xs font-mono"
+              style={{ color: "var(--secondary)" }}
+            >
+              + {f}/
+            </p>
+          ))}
+        </div>
+        <p className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+          Make sure this is the correct repository before continuing.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onCancel} className="btn-ghost text-sm">
+            Cancel
+          </button>
+          <button onClick={onConfirm} className="btn-primary text-sm">
+            Confirm & Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CodeApplierPage() {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
@@ -81,6 +164,10 @@ export default function CodeApplierPage() {
     new Map(),
   );
   const [revertGroup, setRevertGroup] = useState<"ca" | "cb" | "all">("all");
+  const [newFolderModal, setNewFolderModal] = useState<{
+    folders: string[];
+  } | null>(null);
+  const pendingApplyRef = useRef<(() => Promise<void>) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -240,8 +327,8 @@ export default function CodeApplierPage() {
       return next;
     });
   }
-  async function handleApply() {
-    if (!selectedRepo || selected.size === 0 || applying) return;
+  async function doApply() {
+    if (!selectedRepo || selected.size === 0) return;
     setApplying(true);
     setResults([]);
     const toApply = zipEntries.filter((e) => selected.has(e.path));
@@ -288,6 +375,26 @@ export default function CodeApplierPage() {
     }
     setApplying(false);
     loadBackups();
+  }
+  async function handleApply() {
+    if (!selectedRepo || selected.size === 0 || applying) return;
+    const toApply = zipEntries.filter((e) => selected.has(e.path));
+    const filePaths = toApply.map((e) => e.path);
+    try {
+      const res = await fetch("/api/code-applier/check-folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoPath: selectedRepo.path, filePaths }),
+      });
+      const data = await res.json();
+      const newFolders: string[] = data.newFolders ?? [];
+      if (newFolders.length > 0) {
+        pendingApplyRef.current = doApply;
+        setNewFolderModal({ folders: newFolders });
+        return;
+      }
+    } catch {}
+    await doApply();
   }
   async function handleRevert() {
     if (!selectedRepo || selectedBackups.size === 0 || applying) return;
@@ -360,6 +467,23 @@ export default function CodeApplierPage() {
   }
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4">
+      {newFolderModal && selectedRepo && (
+        <NewFolderModal
+          repoPath={selectedRepo.path}
+          newFolders={newFolderModal.folders}
+          onConfirm={async () => {
+            setNewFolderModal(null);
+            if (pendingApplyRef.current) {
+              await pendingApplyRef.current();
+              pendingApplyRef.current = null;
+            }
+          }}
+          onCancel={() => {
+            setNewFolderModal(null);
+            pendingApplyRef.current = null;
+          }}
+        />
+      )}
       <div className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
         <ToolHeader
           title={toolConfig.label}

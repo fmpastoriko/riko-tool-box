@@ -35,7 +35,8 @@ export async function POST(
       RETURNING id, role, created_at
     `;
     return NextResponse.json({ message: { ...message, content } });
-  } catch {
+  } catch (e) {
+    console.error(e);
     return internalError();
   }
 }

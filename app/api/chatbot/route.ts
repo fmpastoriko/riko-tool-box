@@ -53,8 +53,18 @@ export async function POST(req: NextRequest) {
   const role = await getServerRole();
   const owner = isOwnerRole(role);
 
+  const REVIEW_REMINDER = "REVIEW YOUR OUTPUT FIRST BEFORE PRESENTING IT TO ME";
+  const hasSystem = messages.some((m) => m.role === "system");
+  const finalMessages: Message[] = hasSystem
+    ? messages.map((m) =>
+        m.role === "system" && typeof m.content === "string"
+          ? { ...m, content: `${m.content}\n\n${REVIEW_REMINDER}` }
+          : m,
+      )
+    : [{ role: "system", content: REVIEW_REMINDER }, ...messages];
+
   try {
-    const { stream, modelUsed } = await streamChat(messages, owner, model);
+    const { stream, modelUsed } = await streamChat(finalMessages, owner, model);
     return new Response(stream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",

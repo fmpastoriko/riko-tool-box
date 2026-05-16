@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       backupPath,
-      prettified: prettified !== null && prettified !== undefined,
+      prettified,
     });
   } catch {
     return internalError();

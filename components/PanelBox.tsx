@@ -17,8 +17,8 @@ export default function PanelBox({
   children,
 }: PanelBoxProps) {
   const combinedClassName = className
-    ? `flex-1 flex flex-col min-h-0 ${className}`
-    : "flex-1 flex flex-col min-h-0";
+    ? `flex-1 flex flex-col min-h-0 min-w-0 ${className}`
+    : "flex-1 flex flex-col min-h-0 min-w-0";
 
   return (
     <Card

@@ -146,6 +146,30 @@ export default function CodeBrieferPage() {
       }),
     [allFiles, activeExts],
   );
+  useEffect(() => {
+    const isAllowed = (p: string) => {
+      const ext = "." + p.split(".").pop()!.toLowerCase();
+      return activeExts.has(ext);
+    };
+    setSelectedFiles((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const p of prev) {
+        if (isAllowed(p)) next.add(p);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+    setSmartSelected((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const p of prev) {
+        if (isAllowed(p)) next.add(p);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [activeExts]);
   const displayedFiles = useMemo(() => {
     if (!fileSearchTerm) return filteredFiles;
     const lower = fileSearchTerm.toLowerCase();
@@ -766,13 +790,16 @@ export default function CodeBrieferPage() {
     templates.find((t) => selectedTemplates.has(t.id)) ?? null;
   const isAnalytical = activeTemplate?.type === "analytical";
   const isChange = activeTemplate?.type === "change";
-  const footerMode: "full" | "none" | "default2" | "change" = isAnalytical
-    ? "none"
-    : isDefault2
-      ? "default2"
-      : isChange
-        ? "change"
-        : "full";
+  const footerMode: "full" | "none" | "default2" | "change" | "default1" =
+    isAnalytical
+      ? "none"
+      : isDefault1
+        ? "default1"
+        : isDefault2
+          ? "default2"
+          : isChange
+            ? "change"
+            : "full";
   const allModelsExhausted =
     models.length > 0 && models.every((m) => m.exhausted);
   const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/code-briefer");
@@ -1122,55 +1149,59 @@ export default function CodeBrieferPage() {
             </div>
           </Card>
           <div className="flex-1 flex gap-3 min-h-0">
-            <LlmSuggestionPanel
-              llmSuggestion={llmSuggestion}
-              llmSkippedReason={llmSkippedReason}
-              llmStreaming={llmStreaming}
-              llmCopied={llmCopied}
-              modelUsed={modelUsed}
-              models={models}
-              selectedModel={selectedModel}
-              applying={applying}
-              applyResults={applyResults}
-              chatSessionId={chatSessionId}
-              canApply={
-                isLocal &&
-                !!selectedRepo &&
-                parseSuggestion(llmSuggestion).length > 0
-              }
-              llmRef={llmRef}
-              onModelChange={setSelectedModel}
-              onStop={() => llmAbortRef.current?.abort()}
-              onRetry={() => output && streamLlmSuggestion(output)}
-              onCopy={async () => {
-                await navigator.clipboard.writeText(llmSuggestion);
-                setLlmCopied(true);
-                setTimeout(() => setLlmCopied(false), 2000);
-              }}
-              onRunAnyway={() => output && streamLlmSuggestion(output)}
-              onApply={handleApplyChanges}
-              onChange={setLlmSuggestion}
-            />
-            <OutputPanel
-              output={output}
-              tokenCount={tokenCount}
-              copied={copied}
-              joinedFiles={joinedFiles}
-              fullContextFiles={fullContextFiles}
-              allExpanded={allExpanded}
-              templates={templates}
-              selectedTemplates={safeSelectedTemplates}
-              onCopy={async () => {
-                await navigator.clipboard.writeText(output);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              onDownload={handleDownload}
-              onToggleFullContext={toggleFullContext}
-              onExpandAll={expandAllContext}
-              onCollapseAll={collapseAllContext}
-              onChange={setOutput}
-            />
+            <div className="flex-1 flex flex-col min-h-0 min-w-0">
+              <LlmSuggestionPanel
+                llmSuggestion={llmSuggestion}
+                llmSkippedReason={llmSkippedReason}
+                llmStreaming={llmStreaming}
+                llmCopied={llmCopied}
+                modelUsed={modelUsed}
+                models={models}
+                selectedModel={selectedModel}
+                applying={applying}
+                applyResults={applyResults}
+                chatSessionId={chatSessionId}
+                canApply={
+                  isLocal &&
+                  !!selectedRepo &&
+                  parseSuggestion(llmSuggestion).length > 0
+                }
+                llmRef={llmRef}
+                onModelChange={setSelectedModel}
+                onStop={() => llmAbortRef.current?.abort()}
+                onRetry={() => output && streamLlmSuggestion(output)}
+                onCopy={async () => {
+                  await navigator.clipboard.writeText(llmSuggestion);
+                  setLlmCopied(true);
+                  setTimeout(() => setLlmCopied(false), 2000);
+                }}
+                onRunAnyway={() => output && streamLlmSuggestion(output)}
+                onApply={handleApplyChanges}
+                onChange={setLlmSuggestion}
+              />
+            </div>
+            <div className="flex-1 flex flex-col min-h-0 min-w-0">
+              <OutputPanel
+                output={output}
+                tokenCount={tokenCount}
+                copied={copied}
+                joinedFiles={joinedFiles}
+                fullContextFiles={fullContextFiles}
+                allExpanded={allExpanded}
+                templates={templates}
+                selectedTemplates={safeSelectedTemplates}
+                onCopy={async () => {
+                  await navigator.clipboard.writeText(output);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                onDownload={handleDownload}
+                onToggleFullContext={toggleFullContext}
+                onExpandAll={expandAllContext}
+                onCollapseAll={collapseAllContext}
+                onChange={setOutput}
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -8,10 +8,12 @@ import { messageText, type Message } from "./types";
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === "true";
 
 export const markdownStyles = `
+  .markdown-body { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
   .markdown-body ul { list-style-type: disc; padding-left: 20px; margin: 4px 0; }
   .markdown-body ol { list-style-type: decimal; padding-left: 20px; margin: 4px 0; }
   .markdown-body li { margin: 2px 0; }
-  .markdown-body p { margin: 0 0 4px 0; }
+  .markdown-body p { margin: 0 0 4px 0; overflow-wrap: anywhere; }
+  .markdown-body pre { max-width: 100%; overflow-x: auto; }
   .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: 600; margin: 6px 0 2px 0; }
 `;
 
