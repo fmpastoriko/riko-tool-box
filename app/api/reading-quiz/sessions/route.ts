@@ -15,8 +15,6 @@ async function ensureTable() {
     url TEXT,
     passage_text TEXT NOT NULL,
     questions_json TEXT NOT NULL,
-    answers_json TEXT,
-    score INT,
     hashed_ip TEXT,
     user_id TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -29,7 +27,7 @@ export async function GET(req: NextRequest) {
     await ensureTable();
     const rows = await neonDb`
       SELECT id, source, lang, title, origin, url, passage_text, questions_json,
-             answers_json, score, hashed_ip, created_at
+             hashed_ip, created_at
       FROM reading_quiz_sessions
       ORDER BY created_at DESC
       LIMIT 100

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { neonDb } from "@/lib/db";
 import { getRequestContext } from "@/lib/requestContext";
 import { internalError } from "@/lib/apiUtils";
-import { QUESTION_COUNT } from "@/config/readingQuiz";
 
 export async function GET(
   req: NextRequest,
@@ -19,48 +18,6 @@ export async function GET(
     if (rows.length === 0)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ session: rows[0] });
-  } catch {
-    return internalError();
-  }
-}
-
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { owner, hashedIp } = await getRequestContext(req);
-    const { id } = await params;
-    const body = await req.json();
-    const { answers_json, score } = body as {
-      answers_json: string;
-      score: number;
-    };
-
-    if (typeof answers_json !== "string" || answers_json.length > 200) {
-      return NextResponse.json({ error: "Invalid answers" }, { status: 400 });
-    }
-    if (!Number.isInteger(score) || score < 0 || score > QUESTION_COUNT) {
-      return NextResponse.json({ error: "Invalid score" }, { status: 400 });
-    }
-
-    const rows = owner
-      ? await neonDb`
-          UPDATE reading_quiz_sessions
-          SET answers_json = ${answers_json}, score = ${score}
-          WHERE id = ${id}
-          RETURNING id
-        `
-      : await neonDb`
-          UPDATE reading_quiz_sessions
-          SET answers_json = ${answers_json}, score = ${score}
-          WHERE id = ${id} AND hashed_ip = ${hashedIp}
-          RETURNING id
-        `;
-
-    if (rows.length === 0)
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json({ ok: true });
   } catch {
     return internalError();
   }

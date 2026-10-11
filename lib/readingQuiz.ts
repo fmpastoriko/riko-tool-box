@@ -4,13 +4,8 @@ import {
   type Lang,
   type Source,
 } from "@/config/readingQuiz";
-import { QUESTION_POOL, UNIT_NAMES } from "@/config/questionPool";
+import { QUESTION_POOL } from "@/config/questionPool";
 import { parseJsonArray } from "@/lib/llmJson";
-
-export interface ReadingUnit {
-  label: number;
-  text: string;
-}
 
 export interface Reading {
   source: Source;
@@ -18,7 +13,7 @@ export interface Reading {
   title: string;
   origin: string;
   url: string | null;
-  units: ReadingUnit[];
+  paragraphs: string[];
 }
 
 export interface QuizQuestion {
@@ -26,6 +21,10 @@ export interface QuizQuestion {
   options: string[];
   answerIndex: number;
   explanation: string;
+}
+
+export interface ReadingQuiz extends Reading {
+  questions: QuizQuestion[];
 }
 
 export const MAX_PASSAGE_CHARS = 8000;
@@ -80,11 +79,18 @@ export function shuffle<T>(items: T[]): T[] {
   return out;
 }
 
-export function readingToText(units: ReadingUnit[]): string {
-  return units.map((u) => `(${u.label}) ${u.text}`).join("\n");
+export function readingToText(paragraphs: string[]): string {
+  return paragraphs.join("\n\n");
 }
 
-export function pickQuestionStems(lang: Lang, source: Source): string[] {
+export function textToParagraphs(text: string): string[] {
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+export function pickQuestionStems(lang: Lang): string[] {
   const required = QUESTION_POOL.filter((s) => s.required);
   const optional = new Set(
     shuffle(QUESTION_POOL.filter((s) => !s.required)).slice(
@@ -93,30 +99,31 @@ export function pickQuestionStems(lang: Lang, source: Source): string[] {
     ),
   );
   return QUESTION_POOL.filter((s) => s.required || optional.has(s)).map((s) =>
-    shuffle(s.stems[lang])[0].replaceAll("{unit}", UNIT_NAMES[lang][source]),
+    shuffle(s.stems[lang])[0],
   );
 }
 
 export function buildQuizPrompt(
   title: string,
-  source: Source,
   lang: Lang,
   passageText: string,
   stems: string[],
 ): string {
-  const unit = UNIT_NAMES.en[source];
   const language = LANGUAGE_NAMES[lang];
+  const labeled = textToParagraphs(passageText)
+    .map((p, i) => `[Paragraph ${i + 1}] ${p}`)
+    .join("\n\n");
   const optionSlots = Array(OPTIONS_PER_QUESTION).fill('"..."').join(",");
 
   return `Write ${stems.length} UTBK-style reading comprehension multiple choice questions in ${language} about the text below.
 
 Text: ${title}
-The text is split into ${unit}s, each one starts with its number in parentheses.
+Each paragraph is tagged [Paragraph N] here, but readers see the text without any numbers.
 """
-${passageText}
+${labeled}
 """
 
-Question patterns, one per question, in this order. N is a ${unit} number and "..." is a word, phrase, or idea you take from the text. Fill them in, never copy the placeholders literally.
+Question patterns, one per question, in this order. N is a paragraph position and "..." is a word, phrase, or idea you take from the text. Fill them in, never copy the placeholders literally. Refer to paragraphs by ordinal word (Indonesian: paragraf pertama, paragraf kedua; English: the first paragraph, the second paragraph), never by number or tag.
 ${stems.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
 Strict rules:
@@ -128,7 +135,7 @@ Strict rules:
 - Wrong options must be plausible: names, places, numbers, or ideas that appear in the text, half-true statements, or restatements that are too broad or too narrow.
 - Never use options like "all of the above" or "none of the above".
 - When a question quotes a word, phrase, or sentence, copy it exactly from the text.
-- "explanation" is one short sentence that cites the supporting ${unit} number.
+- "explanation" is one short sentence that names the supporting paragraph by ordinal word.
 - Write the questions, options, and explanations in ${language}.`;
 }
 
@@ -193,14 +200,4 @@ export function parseQuizQuestions(raw: string, count: number): QuizQuestion[] {
   }
 
   return out;
-}
-
-export function scoreAnswers(
-  questions: QuizQuestion[],
-  answers: (number | null)[],
-): number {
-  return questions.reduce(
-    (total, q, i) => (answers[i] === q.answerIndex ? total + 1 : total),
-    0,
-  );
 }

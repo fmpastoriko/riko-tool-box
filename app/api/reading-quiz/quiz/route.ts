@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  LANGS,
-  QUESTION_COUNT,
-  SOURCES,
-  type Lang,
-  type Source,
-} from "@/config/readingQuiz";
+import { LANGS, QUESTION_COUNT, type Lang } from "@/config/readingQuiz";
 import {
   MAX_PASSAGE_CHARS,
   buildQuizPrompt,
@@ -25,18 +19,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
 
   const body = await req.json();
-  const { title, source, lang, passageText } = body as {
+  const { title, lang, passageText } = body as {
     title: string;
-    source: Source;
     lang: Lang;
     passageText: string;
   };
 
   if (typeof title !== "string" || title.trim().length === 0) {
     return NextResponse.json({ error: "Missing title" }, { status: 400 });
-  }
-  if (!SOURCES.some((s) => s.value === source)) {
-    return NextResponse.json({ error: "Invalid source" }, { status: 400 });
   }
   if (!LANGS.some((l) => l.value === lang)) {
     return NextResponse.json({ error: "Invalid language" }, { status: 400 });
@@ -53,10 +43,9 @@ export async function POST(req: NextRequest) {
   const owner = isOwnerRole(role);
   const prompt = buildQuizPrompt(
     title.trim().slice(0, MAX_TITLE_CHARS),
-    source,
     lang,
     passageText.trim(),
-    pickQuestionStems(lang, source),
+    pickQuestionStems(lang),
   );
 
   try {

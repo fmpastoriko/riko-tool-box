@@ -1,3 +1,5 @@
+import type { PDFFont } from "pdf-lib";
+
 export const A4_W = 595.28;
 export const A4_H = 841.89;
 export const MARGIN = 40;
@@ -34,4 +36,21 @@ export function getPuzzleBounds(
   const c1 = Math.min(cols - 1, maxCol + pad);
 
   return { r0, r1, c0, c1, visRows: r1 - r0 + 1, visCols: c1 - c0 + 1 };
+}
+
+export function wrapText(font: PDFFont, text: string, size: number, maxW: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? `${cur} ${w}` : w;
+    if (font.widthOfTextAtSize(test, size) <= maxW) {
+      cur = test;
+    } else {
+      if (cur) lines.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }

@@ -4,7 +4,9 @@ import {
   DEFAULT_PASSAGE_VERSES,
   LANGS,
   MAX_PASSAGE_VERSES,
+  MAX_TEXTS,
   MIN_PASSAGE_VERSES,
+  MIN_TEXTS,
   PASSAGE_SCOPES,
   SOURCES,
   type Lang,
@@ -13,26 +15,26 @@ import {
 } from "@/config/readingQuiz";
 import {
   readingToText,
-  scoreAnswers,
   type QuizQuestion,
   type Reading,
+  type ReadingQuiz,
 } from "@/lib/readingQuiz";
+import { downloadPdf } from "@/lib/downloadPdf";
 import { TOOLS_CONFIG } from "@/config/tools";
 import ToolHeader from "@/components/ToolHeader";
 import HistoryButton from "@/components/HistoryButton";
 import PanelBox from "@/components/PanelBox";
+import PuzzleNavigation from "@/components/PuzzleNavigation";
 import Card from "@/components/Card";
 import Slider from "@/components/Slider";
 import TagButton from "@/components/TagButton";
-import StatusBadge from "@/components/StatusBadge";
-import MonoText from "@/components/MonoText";
 import EmptyState from "@/components/EmptyState";
 import ErrorText from "@/components/ErrorText";
 
 const SOURCE_KEY = "reading-quiz-source";
 const LANG_KEY = "reading-quiz-lang";
 const SCOPE_KEY = "reading-quiz-scope";
-const OPTION_LABELS = ["A", "B", "C", "D", "E"];
+const DUPLICATE_RETRIES = 3;
 const toolConfig = TOOLS_CONFIG.find((t) => t.href === "/tools/reading-quiz")!;
 
 function loadChoice<T extends string>(
@@ -43,6 +45,17 @@ function loadChoice<T extends string>(
   if (typeof window === "undefined") return fallback;
   const saved = sessionStorage.getItem(key);
   return choices.some((c) => c.value === saved) ? (saved as T) : fallback;
+}
+
+async function postJson<T>(url: string, body: unknown, fallback: string) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || fallback);
+  return data as T;
 }
 
 export default function ReadingQuizPage() {
@@ -56,13 +69,13 @@ export default function ReadingQuizPage() {
     loadChoice(SCOPE_KEY, PASSAGE_SCOPES, "narrative"),
   );
   const [verseCount, setVerseCount] = useState(DEFAULT_PASSAGE_VERSES);
-  const [reading, setReading] = useState<Reading | null>(null);
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<(number | null)[]>([]);
-  const [submitted, setSubmitted] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [count, setCount] = useState(MIN_TEXTS);
+  const [quizzes, setQuizzes] = useState<ReadingQuiz[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     sessionStorage.setItem(SOURCE_KEY, source);
@@ -70,139 +83,109 @@ export default function ReadingQuizPage() {
     sessionStorage.setItem(SCOPE_KEY, scope);
   }, [source, lang, scope]);
 
-  const resetQuiz = useCallback(() => {
-    setQuestions([]);
-    setAnswers([]);
-    setSubmitted(false);
-    setSessionId(null);
-  }, []);
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    };
+  }, [pdfPreviewUrl]);
 
-  const fetchReading = useCallback(async (): Promise<Reading> => {
-    const res = await fetch("/api/reading-quiz/text", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source, lang, scope, verseCount }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Failed to fetch text");
-    return data.reading as Reading;
-  }, [source, lang, scope, verseCount]);
-
-  const fetchQuestions = useCallback(
-    async (target: Reading): Promise<QuizQuestion[]> => {
-      const res = await fetch("/api/reading-quiz/quiz", {
+  const updatePdfPreview = useCallback(async (list: ReadingQuiz[]) => {
+    if (list.length === 0) return;
+    try {
+      const res = await fetch("/api/reading-quiz/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: target.title,
-          source: target.source,
-          lang: target.lang,
-          passageText: readingToText(target.units),
-        }),
+        body: JSON.stringify({ puzzles: list }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(data.error || "Failed to generate questions");
-      const list = (data.questions ?? []) as QuizQuestion[];
-      if (list.length === 0) throw new Error("No questions returned");
-      return list;
+      if (!res.ok) return;
+      const url = URL.createObjectURL(await res.blob());
+      setPdfPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+    } catch {}
+  }, []);
+
+  const fetchNewReading = useCallback(
+    async (seen: Set<string>): Promise<Reading> => {
+      let reading: Reading | null = null;
+      for (let i = 0; i < DUPLICATE_RETRIES; i++) {
+        reading = (
+          await postJson<{ reading: Reading }>(
+            "/api/reading-quiz/text",
+            { source, lang, scope, verseCount },
+            "Failed to fetch text",
+          )
+        ).reading;
+        if (!seen.has(reading.title)) break;
+      }
+      return reading!;
     },
-    [],
+    [source, lang, scope, verseCount],
   );
 
-  const saveSession = useCallback(
-    async (target: Reading, list: QuizQuestion[]) => {
-      try {
-        const res = await fetch("/api/reading-quiz/sessions", {
+  const handleGenerate = useCallback(async () => {
+    setError("");
+    setQuizzes([]);
+    setCurrentIndex(0);
+    const generated: ReadingQuiz[] = [];
+    const seen = new Set<string>();
+    try {
+      for (let i = 0; i < count; i++) {
+        const step = count > 1 ? `Text ${i + 1}/${count}: ` : "";
+        setLoading(`${step}Pulling text...`);
+        const reading = await fetchNewReading(seen);
+        seen.add(reading.title);
+        setLoading(`${step}Writing questions...`);
+        const { questions } = await postJson<{ questions: QuizQuestion[] }>(
+          "/api/reading-quiz/quiz",
+          {
+            title: reading.title,
+            lang: reading.lang,
+            passageText: readingToText(reading.paragraphs),
+          },
+          "Failed to generate questions",
+        );
+        const quiz = { ...reading, questions };
+        generated.push(quiz);
+        fetch("/api/reading-quiz/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            source: target.source,
-            lang: target.lang,
-            title: target.title,
-            origin: target.origin,
-            url: target.url,
-            passage_text: readingToText(target.units),
-            questions_json: JSON.stringify(list),
+            source: quiz.source,
+            lang: quiz.lang,
+            title: quiz.title,
+            origin: quiz.origin,
+            url: quiz.url,
+            passage_text: readingToText(quiz.paragraphs),
+            questions_json: JSON.stringify(quiz.questions),
           }),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        setSessionId(data.id ?? null);
-      } catch {}
-    },
-    [],
-  );
-
-  const runQuiz = useCallback(
-    async (existing: Reading | null) => {
-      setError("");
-      resetQuiz();
-      setLoading(existing ? "Writing questions..." : "Pulling text...");
-      try {
-        const target = existing ?? (await fetchReading());
-        setReading(target);
-        setLoading("Writing questions...");
-        const list = await fetchQuestions(target);
-        setQuestions(list);
-        setAnswers(new Array(list.length).fill(null));
-        await saveSession(target, list);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Generation failed.");
-      } finally {
-        setLoading("");
+        }).catch(() => {});
       }
-    },
-    [fetchReading, fetchQuestions, resetQuiz, saveSession],
-  );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Generation failed.");
+    }
+    if (generated.length > 0) {
+      setLoading("Rendering PDF...");
+      setQuizzes(generated);
+      await updatePdfPreview(generated);
+    }
+    setLoading("");
+  }, [count, fetchNewReading, updatePdfPreview]);
 
-  const handleSubmit = useCallback(async () => {
-    if (questions.length === 0 || submitted) return;
-    setSubmitted(true);
-    const score = scoreAnswers(questions, answers);
-    if (!sessionId) return;
+  const handleDownload = useCallback(async () => {
+    if (quizzes.length === 0) return;
+    setDownloading(true);
     try {
-      await fetch(`/api/reading-quiz/sessions/${sessionId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers_json: JSON.stringify(answers), score }),
-      });
-    } catch {}
-  }, [answers, questions, sessionId, submitted]);
+      await downloadPdf(quizzes, "/api/reading-quiz/pdf", "reading-quiz.pdf");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Download failed.");
+    } finally {
+      setDownloading(false);
+    }
+  }, [quizzes]);
 
-  const answered = answers.filter((a) => a !== null).length;
-  const score = submitted ? scoreAnswers(questions, answers) : 0;
-
-  const optionStyle = (questionIndex: number, optionIndex: number) => {
-    const picked = answers[questionIndex] === optionIndex;
-    const correct = questions[questionIndex].answerIndex === optionIndex;
-    if (!submitted) {
-      return {
-        background: picked ? "var(--accent-dim)" : "var(--bg)",
-        borderColor: picked ? "var(--accent)" : "var(--border)",
-        color: picked ? "var(--accent)" : "var(--secondary)",
-      };
-    }
-    if (correct) {
-      return {
-        background: "rgba(34,197,94,0.1)",
-        borderColor: "rgb(34,197,94)",
-        color: "rgb(34,197,94)",
-      };
-    }
-    if (picked) {
-      return {
-        background: "rgba(239,68,68,0.1)",
-        borderColor: "rgb(239,68,68)",
-        color: "rgb(239,68,68)",
-      };
-    }
-    return {
-      background: "var(--bg)",
-      borderColor: "var(--border)",
-      color: "var(--muted)",
-    };
-  };
+  const busy = loading !== "";
 
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">
@@ -226,7 +209,7 @@ export default function ReadingQuizPage() {
                   key={s.value}
                   active={source === s.value}
                   onClick={() => setSource(s.value)}
-                  disabled={loading !== ""}
+                  disabled={busy}
                 >
                   {s.label}
                 </TagButton>
@@ -240,7 +223,7 @@ export default function ReadingQuizPage() {
                   key={l.value}
                   active={lang === l.value}
                   onClick={() => setLang(l.value)}
-                  disabled={loading !== ""}
+                  disabled={busy}
                 >
                   {l.label}
                 </TagButton>
@@ -256,7 +239,7 @@ export default function ReadingQuizPage() {
                       key={s.value}
                       active={scope === s.value}
                       onClick={() => setScope(s.value)}
-                      disabled={loading !== ""}
+                      disabled={busy}
                     >
                       {s.label}
                     </TagButton>
@@ -273,144 +256,63 @@ export default function ReadingQuizPage() {
               />
             </>
           )}
+          <Slider
+            label="Number of Texts"
+            value={count}
+            min={MIN_TEXTS}
+            max={MAX_TEXTS}
+            onChange={setCount}
+          />
           <button
-            onClick={() => runQuiz(null)}
-            disabled={loading !== ""}
+            onClick={handleGenerate}
+            disabled={busy}
             className="btn-primary text-xs font-mono flex-shrink-0 justify-center"
-            style={{ opacity: loading ? 0.6 : 1 }}
+            style={{ opacity: busy ? 0.6 : 1 }}
           >
-            {loading || "Generate Quiz"}
+            {loading || "Generate"}
           </button>
-          {reading && (
-            <button
-              onClick={() => runQuiz(reading)}
-              disabled={loading !== ""}
-              className="btn-ghost text-xs font-mono flex-shrink-0 justify-center"
-            >
-              New Questions, Same Text
-            </button>
-          )}
           {error && <ErrorText>{error}</ErrorText>}
-          {questions.length > 0 && (
-            <Card title="Progress" className="flex-shrink-0">
-              <MonoText color="muted">
-                {submitted
-                  ? `Score ${score} / ${questions.length}`
-                  : `${answered} / ${questions.length} answered`}
-              </MonoText>
-              {!submitted && (
-                <button
-                  onClick={handleSubmit}
-                  disabled={answered === 0}
-                  className="btn-primary text-xs font-mono w-full justify-center mt-2"
-                  style={{ opacity: answered === 0 ? 0.6 : 1 }}
-                >
-                  Check Answers
-                </button>
-              )}
-            </Card>
+          {quizzes.length > 0 && pdfPreviewUrl && !busy && (
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="btn-ghost text-xs font-mono flex-shrink-0 justify-center lg:hidden"
+            >
+              {downloading
+                ? "Downloading..."
+                : `Download PDF${quizzes.length > 1 ? ` (${quizzes.length})` : ""}`}
+            </button>
           )}
         </div>
 
         <PanelBox
-          title="Reading"
+          title={`Preview${quizzes.length > 0 ? ` (${currentIndex + 1} / ${quizzes.length})` : ""}`}
           headerRight={
-            reading ? (
-              <>
-                <StatusBadge variant="accent">{reading.origin}</StatusBadge>
-                <StatusBadge variant="border">
-                  {reading.lang.toUpperCase()}
-                </StatusBadge>
-              </>
-            ) : null
+            <PuzzleNavigation
+              title=""
+              count={quizzes.length}
+              currentIndex={currentIndex}
+              onIndexChange={setCurrentIndex}
+              onDownload={handleDownload}
+              downloading={downloading}
+            />
           }
-          className="flex-1 min-h-0 overflow-auto"
+          className="flex-1 min-h-0 overflow-auto hidden lg:flex"
         >
-          {loading && !reading ? (
-            <EmptyState message={loading} />
-          ) : !reading ? (
-            <EmptyState message="Pick a source and click Generate Quiz." />
-          ) : (
-            <div className="flex flex-col gap-4 overflow-y-auto min-h-0 pr-1">
-              <div className="flex flex-col gap-1">
-                <p
-                  className="text-sm font-semibold mb-1"
-                  style={{ color: "var(--primary)" }}
-                >
-                  {reading.url ? (
-                    <a href={reading.url} target="_blank" rel="noreferrer">
-                      {reading.title}
-                    </a>
-                  ) : (
-                    reading.title
-                  )}
-                </p>
-                {reading.units.map((u) => (
-                  <p
-                    key={u.label}
-                    className="text-sm leading-relaxed"
-                    style={{ color: "var(--secondary)" }}
-                  >
-                    <span
-                      className="font-mono text-xs mr-1.5"
-                      style={{ color: "var(--muted)" }}
-                    >
-                      {u.label}
-                    </span>
-                    {u.text}
-                  </p>
-                ))}
-              </div>
-
-              {loading && questions.length === 0 && (
-                <MonoText color="muted">{loading}</MonoText>
-              )}
-
-              {questions.map((q, qi) => (
-                <div
-                  key={qi}
-                  className="flex flex-col gap-2 pt-3"
-                  style={{ borderTop: "1px solid var(--border)" }}
-                >
-                  <p
-                    className="text-sm font-semibold"
-                    style={{ color: "var(--primary)" }}
-                  >
-                    {qi + 1}. {q.question}
-                  </p>
-                  <div className="flex flex-col gap-1.5">
-                    {q.options.map((opt, oi) => (
-                      <button
-                        key={oi}
-                        onClick={() =>
-                          !submitted &&
-                          setAnswers((prev) => {
-                            const next = [...prev];
-                            next[qi] = oi;
-                            return next;
-                          })
-                        }
-                        disabled={submitted}
-                        className="text-left text-sm rounded-lg px-3 py-2 transition-colors"
-                        style={{
-                          border: "1px solid",
-                          cursor: submitted ? "default" : "pointer",
-                          ...optionStyle(qi, oi),
-                        }}
-                      >
-                        <span className="font-mono text-xs mr-2">
-                          {OPTION_LABELS[oi] ?? oi + 1}
-                        </span>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                  {submitted && q.explanation && (
-                    <MonoText color="muted">{q.explanation}</MonoText>
-                  )}
-                </div>
-              ))}
+          {quizzes.length === 0 ? (
+            <EmptyState
+              message={loading || "Pick a source and click Generate."}
+            />
+          ) : pdfPreviewUrl ? (
+            <div className="flex items-center justify-center p-2 w-full h-full">
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full border-none"
+                title="PDF Preview"
+              />
             </div>
+          ) : (
+            <EmptyState message="Loading preview..." />
           )}
         </PanelBox>
       </div>

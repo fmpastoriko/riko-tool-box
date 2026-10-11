@@ -9,24 +9,8 @@ import {
   ANSWER_KEY_PER_ROW,
   ANSWER_KEY_PER_COL,
   getAnswerKeyLayout,
+  wrapText,
 } from "@/lib/pdfLayout";
-
-function wrapText(font: PDFFont, text: string, size: number, maxW: number): string[] {
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    const test = cur ? `${cur} ${w}` : w;
-    if (font.widthOfTextAtSize(test, size) <= maxW) {
-      cur = test;
-    } else {
-      if (cur) lines.push(cur);
-      cur = w;
-    }
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
 
 function computePrefilledCells(puzzle: CrosswordPuzzle): Set<string> {
   const set = new Set<string>();

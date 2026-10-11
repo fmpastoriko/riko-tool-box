@@ -30,6 +30,9 @@ export const PASSAGE_SCOPES: { value: PassageScope; label: string }[] = [
 
 export const QUESTION_COUNT = 5;
 export const OPTIONS_PER_QUESTION = 5;
+export const MIN_PARAGRAPHS = 2;
+export const MIN_TEXTS = 1;
+export const MAX_TEXTS = 5;
 
 export const FETCH_TIMEOUT_MS = 10_000;
 
@@ -51,6 +54,7 @@ export const PASSAGE_PICK_ATTEMPTS = 5;
 export const MIN_PASSAGE_VERSES = 4;
 export const MAX_PASSAGE_VERSES = 15;
 export const DEFAULT_PASSAGE_VERSES = 8;
+export const VERSES_PER_PARAGRAPH = 4;
 
 function book(
   id: number,

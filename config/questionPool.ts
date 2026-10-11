@@ -1,15 +1,10 @@
-import type { Lang, Source } from "@/config/readingQuiz";
+import type { Lang } from "@/config/readingQuiz";
 
 export interface QuestionSlot {
   category: string;
   required: boolean;
   stems: Record<Lang, string[]>;
 }
-
-export const UNIT_NAMES: Record<Lang, Record<Source, string>> = {
-  id: { news: "paragraf", bible: "ayat" },
-  en: { news: "paragraph", bible: "verse" },
-};
 
 export const QUESTION_POOL: QuestionSlot[] = [
   {
@@ -21,14 +16,14 @@ export const QUESTION_POOL: QuestionSlot[] = [
         "Gagasan utama teks tersebut adalah ...",
         "Tujuan penulis menulis teks tersebut adalah ...",
         "Ringkasan yang paling tepat untuk teks tersebut adalah ...",
-        "Apa informasi utama {unit} N?",
+        "Apa informasi utama paragraf N?",
       ],
       en: [
         "What is the passage mainly about?",
         "What is the best summary of the passage?",
         "What is the main purpose of the passage?",
-        "What is the main idea of {unit} N?",
-        "What is {unit} N mainly reporting?",
+        "What is the main idea of paragraph N?",
+        "What is paragraph N mainly reporting?",
       ],
     },
   },
@@ -39,14 +34,14 @@ export const QUESTION_POOL: QuestionSlot[] = [
       id: [
         "Pernyataan yang sesuai dengan isi teks adalah ...",
         "Berdasarkan teks, semua pernyataan berikut benar, KECUALI ...",
-        "Kalimat yang isinya sama dengan {unit} N adalah ...",
+        "Kalimat yang isinya sama dengan paragraf N adalah ...",
         "Siapa yang ... menurut teks tersebut?",
         "Berdasarkan teks, apa yang menyebabkan ...?",
       ],
       en: [
         "According to the passage, all of the following are true, EXCEPT ...",
         "According to the passage, which of the following statements is true?",
-        "Which statement best restates {unit} N?",
+        "Which statement best restates paragraph N?",
         "According to the passage, who ...?",
         "According to the passage, why ...?",
       ],
@@ -57,17 +52,17 @@ export const QUESTION_POOL: QuestionSlot[] = [
     required: true,
     stems: {
       id: [
-        "Kata '...' pada {unit} N paling dekat maknanya dengan kata ...",
-        "Kelompok kata '...' pada {unit} N memiliki makna paling dekat dengan kelompok kata ...",
-        "Sesuai dengan konteks dalam teks, kata '...' pada {unit} N memiliki makna yang berlawanan dengan kata ...",
-        "Kata yang memiliki makna lebih luas dari kata '...' pada {unit} N adalah ...",
-        "Kata yang paling tepat menggantikan '...' pada {unit} N adalah ...",
+        "Kata '...' pada paragraf N paling dekat maknanya dengan kata ...",
+        "Kelompok kata '...' pada paragraf N memiliki makna paling dekat dengan kelompok kata ...",
+        "Sesuai dengan konteks dalam teks, kata '...' pada paragraf N memiliki makna yang berlawanan dengan kata ...",
+        "Kata yang memiliki makna lebih luas dari kata '...' pada paragraf N adalah ...",
+        "Kata yang paling tepat menggantikan '...' pada paragraf N adalah ...",
         "Hubungan kata '...' dan kata '...' dalam teks sama dengan hubungan kata '...' dan kata ...",
       ],
       en: [
-        "As used in {unit} N, the word '...' is closest in meaning to ...",
-        "The phrase '...' in {unit} N is closest in meaning to ...",
-        "As used in {unit} N, the word '...' is opposite in meaning to ...",
+        "As used in paragraph N, the word '...' is closest in meaning to ...",
+        "The phrase '...' in paragraph N is closest in meaning to ...",
+        "As used in paragraph N, the word '...' is opposite in meaning to ...",
       ],
     },
   },
@@ -76,12 +71,12 @@ export const QUESTION_POOL: QuestionSlot[] = [
     required: false,
     stems: {
       id: [
-        "Kata '...' pada {unit} N merujuk pada ...",
-        "Frasa '...' pada {unit} N mengacu pada ...",
+        "Kata '...' pada paragraf N merujuk pada ...",
+        "Frasa '...' pada paragraf N mengacu pada ...",
       ],
       en: [
-        "In {unit} N, '...' refers to ...",
-        "What does '...' in {unit} N refer to?",
+        "In paragraph N, '...' refers to ...",
+        "What does '...' in paragraph N refer to?",
       ],
     },
   },
@@ -91,14 +86,14 @@ export const QUESTION_POOL: QuestionSlot[] = [
     stems: {
       id: [
         "Pandangan penulis terhadap ... adalah ...",
-        "Mengapa penulis menyebutkan ... pada {unit} N?",
-        "Simpulan yang paling tepat dari {unit} N adalah ...",
+        "Mengapa penulis menyebutkan ... pada paragraf N?",
+        "Simpulan yang paling tepat dari paragraf N adalah ...",
         "Berdasarkan teks, hal yang dapat disimpulkan tentang ... adalah ...",
       ],
       en: [
-        "Why does the author mention ... in {unit} N?",
+        "Why does the author mention ... in paragraph N?",
         "Based on the passage, what can be inferred about ...?",
-        "In {unit} N, describing ... as '...' suggests that ... is ...",
+        "In paragraph N, describing ... as '...' suggests that ... is ...",
         "What is the author's attitude toward ...?",
       ],
     },
@@ -108,16 +103,16 @@ export const QUESTION_POOL: QuestionSlot[] = [
     required: false,
     stems: {
       id: [
-        "Fungsi kata penghubung '...' pada {unit} N adalah ...",
+        "Fungsi kata penghubung '...' pada paragraf N adalah ...",
         "Kata penghubung yang paling tepat untuk melengkapi kalimat '... [...] ...' adalah ...",
         "Kalimat berikut perlu dimasukkan ke dalam teks: '...'. Kalimat tersebut paling tepat ditempatkan setelah kalimat yang diawali ...",
-        "Tujuan penggunaan kata '...' pada {unit} N adalah ...",
+        "Tujuan penggunaan kata '...' pada paragraf N adalah ...",
         "Perumpamaan atau ungkapan bermakna kias pada teks tersebut dapat ditemukan pada ...",
       ],
       en: [
-        "In {unit} N, the use of '...' indicates that ...",
-        "The comparison to '...' in {unit} N mainly helps readers understand ...",
-        "What is the main function of the sentence '...' in {unit} N?",
+        "In paragraph N, the use of '...' indicates that ...",
+        "The comparison to '...' in paragraph N mainly helps readers understand ...",
+        "What is the main function of the sentence '...' in paragraph N?",
       ],
     },
   },

@@ -330,13 +330,14 @@ See `README-crossword.md` for full design notes.
 
 | Attribute | Detail                                                                                                   |
 | --------- | -------------------------------------------------------------------------------------------------------- |
-| Purpose   | Drill UTBK-style reading comprehension on fresh text                                                     |
+| Purpose   | Printable UTBK-style reading comprehension drills on fresh text                                          |
 | News      | The Conversation Atom feed (ID or global EN), random pick from the 15 latest articles, first paragraphs  |
-| Bible     | bolls.life public API, TB (ID) or WEB (EN); random book + chapter in scope, random verse window          |
+| Bible     | bolls.life public API, TB (ID) or WEB (EN); random verse window grouped into paragraphs of about 4 verses |
+| Text      | Plain paragraphs, no numbering, at least 2 paragraphs per text                                           |
 | Questions | 5 per text, LLM-written, 5 options (A-E), answers must be provable from the text                         |
 | Pool      | Question patterns taken from PRISMA UTBK PPU, PBM, and Literasi Bahasa Inggris packets                   |
-| Grading   | Answer key ships with the questions; scored client-side, correct option revealed on submit               |
-| History   | Text, questions, picked answers, and score saved per quiz                                                |
+| Output    | PDF: one text per page with its questions (numbered across texts), answer key with explanations at end   |
+| History   | Each text saved with its questions; re-download as PDF                                                   |
 
 The question pool (`config/questionPool.ts`) groups patterns into six
 categories. Every quiz asks gist (title, main idea, purpose, summary), detail
@@ -344,40 +345,46 @@ categories. Every quiz asks gist (title, main idea, purpose, summary), detail
 hypernym, analogy) questions, plus two of reference ("X refers to"), reasoning
 (author's view, why mention, inference) and language (connector function,
 fill-in connector, sentence insertion, figurative phrase). One random pattern is
-drawn per category and the LLM fills it from the text.
+drawn per category and the LLM fills it from the text. Paragraphs are tagged
+only inside the prompt; questions refer to them by ordinal word ("paragraf
+kedua", "the second paragraph").
 
-News articles are cut to at most 5 paragraphs or about 220 words, and an article
-under 120 words is skipped. The feed is cached for 15 minutes. Bible chapters
-shorter than 4 verses are re-rolled (up to 5 picks). Options are reshuffled
-server-side because models like putting the correct answer first, and a
-malformed question set triggers one retry before the request fails.
+News articles are cut to 2-5 paragraphs or about 220 words, and an article
+under 120 words is skipped. The feed is cached for 15 minutes. Texts in one
+batch are de-duplicated by title (3 re-pulls). Bible chapters shorter than 4
+verses are re-rolled (up to 5 picks). Options are reshuffled server-side
+because models like putting the correct answer first, and a malformed question
+set triggers one retry before the request fails. The PDF uses the standard
+Helvetica fonts, so characters outside WinAnsi fall back to their unaccented
+form or `?`.
 
 #### Options
 
-| Option         | Range / Values                                                 |
-| -------------- | -------------------------------------------------------------- |
-| Source         | Latest News / Bible                                            |
-| Language       | Indonesia / English                                            |
-| Passage scope  | Narrative / Old Testament / New Testament / Whole (Bible only) |
-| Passage length | 4-15 verses (Bible only)                                       |
+| Option          | Range / Values                                                 |
+| --------------- | -------------------------------------------------------------- |
+| Source          | Latest News / Bible                                            |
+| Language        | Indonesia / English                                            |
+| Passage scope   | Narrative / Old Testament / New Testament / Whole (Bible only) |
+| Passage length  | 4-15 verses (Bible only)                                       |
+| Number of texts | 1-5                                                            |
 
 #### API Routes
 
-| Route                          | Method | Auth  | Description                                 |
-| ------------------------------ | ------ | ----- | ------------------------------------------- |
-| /api/reading-quiz/text         | POST   | None  | Fetch a news article or Bible passage       |
-| /api/reading-quiz/quiz         | POST   | None  | Generate 5 questions for the text via LLM   |
-| /api/reading-quiz/sessions     | GET    | None  | List quizzes (IP-scoped)                    |
-| /api/reading-quiz/sessions     | POST   | None  | Save a generated quiz                       |
-| /api/reading-quiz/sessions/:id | GET    | None  | Get single quiz                             |
-| /api/reading-quiz/sessions/:id | PATCH  | None  | Record submitted answers and score          |
-| /api/reading-quiz/sessions/:id | DELETE | Owner | Delete quiz                                 |
+| Route                          | Method | Auth  | Description                               |
+| ------------------------------ | ------ | ----- | ----------------------------------------- |
+| /api/reading-quiz/text         | POST   | None  | Fetch a news article or Bible passage     |
+| /api/reading-quiz/quiz         | POST   | None  | Generate 5 questions for the text via LLM |
+| /api/reading-quiz/pdf          | POST   | None  | Render texts + questions + key as PDF     |
+| /api/reading-quiz/sessions     | GET    | None  | List saved texts (IP-scoped)              |
+| /api/reading-quiz/sessions     | POST   | None  | Save a text with its questions            |
+| /api/reading-quiz/sessions/:id | GET    | None  | Get single text                           |
+| /api/reading-quiz/sessions/:id | DELETE | Owner | Delete text                               |
 
 #### Database Schema
 
-| Table                 | Key Columns                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| reading_quiz_sessions | id (uuid), source, lang, title, origin, url, passage_text, questions_json, answers_json, score, hashed_ip, user_id, created_at |
+| Table                 | Key Columns                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| reading_quiz_sessions | id (uuid), source, lang, title, origin, url, passage_text, questions_json, hashed_ip, user_id, created_at |
 
 ---
 

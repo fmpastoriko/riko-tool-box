@@ -99,8 +99,6 @@ CREATE TABLE IF NOT EXISTS reading_quiz_sessions (
   url            TEXT,
   passage_text   TEXT        NOT NULL,
   questions_json TEXT        NOT NULL,
-  answers_json   TEXT,
-  score          INTEGER,
   hashed_ip      TEXT,
   user_id        TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -1,5 +1,6 @@
 import {
   FETCH_TIMEOUT_MS,
+  MIN_PARAGRAPHS,
   NEWS_FEED_REVALIDATE_S,
   NEWS_FEEDS,
   NEWS_MAX_PARAGRAPHS,
@@ -51,12 +52,17 @@ export function articleParagraphs(html: string): string[] {
   const picked: string[] = [];
   let words = 0;
   for (const p of paragraphs) {
-    if (picked.length >= NEWS_MAX_PARAGRAPHS || words >= NEWS_TARGET_WORDS)
+    if (
+      picked.length >= NEWS_MAX_PARAGRAPHS ||
+      (picked.length >= MIN_PARAGRAPHS && words >= NEWS_TARGET_WORDS)
+    )
       break;
     picked.push(p);
     words += p.split(" ").length;
   }
-  return words >= NEWS_MIN_WORDS ? picked : [];
+  return picked.length >= MIN_PARAGRAPHS && words >= NEWS_MIN_WORDS
+    ? picked
+    : [];
 }
 
 export async function fetchLatestArticle(lang: Lang): Promise<Reading> {
@@ -77,7 +83,7 @@ export async function fetchLatestArticle(lang: Lang): Promise<Reading> {
       title: entry.title,
       origin: NEWS_ORIGIN,
       url: entry.url || null,
-      units: paragraphs.map((text, i) => ({ label: i + 1, text })),
+      paragraphs,
     };
   }
 

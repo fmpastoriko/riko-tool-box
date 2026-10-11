@@ -4,19 +4,26 @@ import {
   BIBLE_TRANSLATIONS,
   FETCH_TIMEOUT_MS,
   MAX_PASSAGE_VERSES,
+  MIN_PARAGRAPHS,
   MIN_PASSAGE_VERSES,
   PASSAGE_PICK_ATTEMPTS,
+  VERSES_PER_PARAGRAPH,
   type BibleBook,
   type Lang,
   type PassageScope,
 } from "@/config/readingQuiz";
-import { stripMarkup, type Reading, type ReadingUnit } from "@/lib/readingQuiz";
+import { stripMarkup, type Reading } from "@/lib/readingQuiz";
 
 export function booksForScope(scope: PassageScope): BibleBook[] {
   if (scope === "narrative") return BIBLE_BOOKS.filter((b) => b.narrative);
   if (scope === "old") return BIBLE_BOOKS.filter((b) => b.testament === "old");
   if (scope === "new") return BIBLE_BOOKS.filter((b) => b.testament === "new");
   return BIBLE_BOOKS;
+}
+
+interface Verse {
+  verse: number;
+  text: string;
 }
 
 function pickRandom<T>(items: T[]): T {
@@ -27,7 +34,7 @@ async function fetchChapter(
   translation: string,
   bookId: number,
   chapter: number,
-): Promise<ReadingUnit[]> {
+): Promise<Verse[]> {
   const res = await fetch(
     `${BIBLE_API_BASE}/get-text/${translation}/${bookId}/${chapter}/`,
     { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
@@ -39,11 +46,26 @@ async function fetchChapter(
 
   return (data as { verse?: unknown; text?: unknown }[])
     .map((v) => ({
-      label: typeof v.verse === "number" ? v.verse : 0,
+      verse: typeof v.verse === "number" ? v.verse : 0,
       text: typeof v.text === "string" ? stripMarkup(v.text) : "",
     }))
-    .filter((v) => v.label > 0 && v.text.length > 0)
-    .sort((a, b) => a.label - b.label);
+    .filter((v) => v.verse > 0 && v.text.length > 0)
+    .sort((a, b) => a.verse - b.verse);
+}
+
+export function versesToParagraphs(texts: string[]): string[] {
+  const count = Math.max(
+    MIN_PARAGRAPHS,
+    Math.round(texts.length / VERSES_PER_PARAGRAPH),
+  );
+  return Array.from({ length: count }, (_, i) =>
+    texts
+      .slice(
+        Math.round((i * texts.length) / count),
+        Math.round(((i + 1) * texts.length) / count),
+      )
+      .join(" "),
+  );
 }
 
 export function formatReference(
@@ -82,7 +104,7 @@ export async function fetchRandomPassage(
 
       const take = Math.min(wanted, verses.length);
       const startIndex = Math.floor(Math.random() * (verses.length - take + 1));
-      const units = verses.slice(startIndex, startIndex + take);
+      const window = verses.slice(startIndex, startIndex + take);
 
       return {
         source: "bible",
@@ -90,12 +112,12 @@ export async function fetchRandomPassage(
         title: formatReference(
           book.names[lang],
           chapter,
-          units[0].label,
-          units[units.length - 1].label,
+          window[0].verse,
+          window[window.length - 1].verse,
         ),
         origin: translation,
         url: null,
-        units,
+        paragraphs: versesToParagraphs(window.map((v) => v.text)),
       };
     } catch (e) {
       lastError = e;
