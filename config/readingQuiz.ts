@@ -28,7 +28,9 @@ export const PASSAGE_SCOPES: { value: PassageScope; label: string }[] = [
   { value: "all", label: "Whole Bible" },
 ];
 
-export const QUESTION_COUNT = 5;
+export const QUESTION_COUNT = 10;
+export const MIN_QUESTIONS = 5;
+export const MAX_PAGES_PER_TEXT = 2;
 export const OPTIONS_PER_QUESTION = 5;
 export const MIN_PARAGRAPHS = 2;
 export const MIN_TEXTS = 1;

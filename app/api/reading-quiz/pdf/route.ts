@@ -7,7 +7,7 @@ import {
   type PDFPage,
   type RGB,
 } from "pdf-lib";
-import { MAX_TEXTS, type Lang } from "@/config/readingQuiz";
+import { MAX_PAGES_PER_TEXT, MAX_TEXTS, type Lang } from "@/config/readingQuiz";
 import type { ReadingQuiz } from "@/lib/readingQuiz";
 import { sendPdfResponse } from "@/lib/pdfUtils";
 import { A4_W, A4_H, MARGIN, wrapText } from "@/lib/pdfLayout";
@@ -52,13 +52,15 @@ function toWinAnsi(charset: Set<number>, text: string): string {
   ).join("");
 }
 
-function createWriter(pdfDoc: PDFDocument, charset: Set<number>) {
-  let page: PDFPage = pdfDoc.addPage([A4_W, A4_H]);
+function createWriter(pdfDoc: PDFDocument | null, charset: Set<number>) {
+  let page: PDFPage | null = pdfDoc?.addPage([A4_W, A4_H]) ?? null;
+  let pages = 1;
   let y = A4_H - MARGIN;
   const maxW = A4_W - MARGIN * 2;
 
   function newPage() {
-    page = pdfDoc.addPage([A4_W, A4_H]);
+    page = pdfDoc?.addPage([A4_W, A4_H]) ?? null;
+    pages++;
     y = A4_H - MARGIN;
   }
 
@@ -87,7 +89,7 @@ function createWriter(pdfDoc: PDFDocument, charset: Set<number>) {
     lines.forEach((line, i) => {
       if (y - lineH < MARGIN) newPage();
       if (i === 0 && safeLabel) {
-        page.drawText(safeLabel, {
+        page?.drawText(safeLabel, {
           x: MARGIN + indent,
           y: y - size,
           size,
@@ -95,7 +97,7 @@ function createWriter(pdfDoc: PDFDocument, charset: Set<number>) {
           color,
         });
       }
-      page.drawText(line, {
+      page?.drawText(line, {
         x: MARGIN + indent + labelW,
         y: y - size,
         size,
@@ -108,6 +110,7 @@ function createWriter(pdfDoc: PDFDocument, charset: Set<number>) {
 
   return {
     newPage,
+    pages: () => pages,
     gap: (h: number) => {
       y -= h;
     },
@@ -163,6 +166,28 @@ function drawQuiz(
     });
     w.gap(10);
   });
+}
+
+function fitQuiz(
+  fonts: Fonts,
+  charset: Set<number>,
+  quiz: ReadingQuiz,
+  index: number,
+  total: number,
+  firstNumber: number,
+): ReadingQuiz {
+  const trimmed = (count: number) => ({
+    ...quiz,
+    questions: quiz.questions.slice(0, count),
+  });
+  let count = quiz.questions.length;
+  while (count > 1) {
+    const w = createWriter(null, charset);
+    drawQuiz(w, fonts, trimmed(count), index, total, firstNumber);
+    if (w.pages() <= MAX_PAGES_PER_TEXT) break;
+    count--;
+  }
+  return trimmed(count);
 }
 
 function drawAnswerKey(w: Writer, fonts: Fonts, quizzes: ReadingQuiz[]) {
@@ -230,13 +255,16 @@ export async function POST(req: NextRequest) {
   const charset = new Set(fonts.regular.getCharacterSet());
   const writer = createWriter(pdfDoc, charset);
 
+  const fitted: ReadingQuiz[] = [];
   let firstNumber = 1;
   puzzles.forEach((quiz, i) => {
+    const fit = fitQuiz(fonts, charset, quiz, i, puzzles.length, firstNumber);
     if (i > 0) writer.newPage();
-    drawQuiz(writer, fonts, quiz, i, puzzles.length, firstNumber);
-    firstNumber += quiz.questions.length;
+    drawQuiz(writer, fonts, fit, i, puzzles.length, firstNumber);
+    firstNumber += fit.questions.length;
+    fitted.push(fit);
   });
-  drawAnswerKey(writer, fonts, puzzles);
+  drawAnswerKey(writer, fonts, fitted);
 
   return sendPdfResponse(pdfDoc, "reading-quiz.pdf");
 }

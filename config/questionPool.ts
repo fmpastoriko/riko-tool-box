@@ -2,14 +2,12 @@ import type { Lang } from "@/config/readingQuiz";
 
 export interface QuestionSlot {
   category: string;
-  required: boolean;
   stems: Record<Lang, string[]>;
 }
 
 export const QUESTION_POOL: QuestionSlot[] = [
   {
     category: "gist",
-    required: true,
     stems: {
       id: [
         "Judul yang paling tepat untuk teks tersebut adalah ...",
@@ -29,7 +27,6 @@ export const QUESTION_POOL: QuestionSlot[] = [
   },
   {
     category: "detail",
-    required: true,
     stems: {
       id: [
         "Pernyataan yang sesuai dengan isi teks adalah ...",
@@ -49,7 +46,6 @@ export const QUESTION_POOL: QuestionSlot[] = [
   },
   {
     category: "vocab",
-    required: true,
     stems: {
       id: [
         "Kata '...' pada paragraf N paling dekat maknanya dengan kata ...",
@@ -68,7 +64,6 @@ export const QUESTION_POOL: QuestionSlot[] = [
   },
   {
     category: "reference",
-    required: false,
     stems: {
       id: [
         "Kata '...' pada paragraf N merujuk pada ...",
@@ -82,7 +77,6 @@ export const QUESTION_POOL: QuestionSlot[] = [
   },
   {
     category: "reasoning",
-    required: false,
     stems: {
       id: [
         "Pandangan penulis terhadap ... adalah ...",
@@ -100,7 +94,6 @@ export const QUESTION_POOL: QuestionSlot[] = [
   },
   {
     category: "language",
-    required: false,
     stems: {
       id: [
         "Fungsi kata penghubung '...' pada paragraf N adalah ...",

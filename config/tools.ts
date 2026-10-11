@@ -112,7 +112,7 @@ export const TOOLS_CONFIG: ToolConfig[] = [
     highlight: true,
     hasHistory: true,
     description:
-      "Pull the latest news articles or random Bible passages, in Indonesian or English, and let the LLM write five UTBK-style reading comprehension questions per text: main idea, facts, word meaning, reference, inference. Download as a printable PDF with an answer key.",
+      "Pull the latest news articles or random Bible passages, in Indonesian or English, and let the LLM write up to ten UTBK-style reading comprehension questions per text: main idea, facts, word meaning, reference, inference. Download as a printable PDF with an answer key.",
     shortDescription: "Latest news or a Bible passage, AI reading quiz.",
     demonstrates: ["LLM quiz gen", "Atom feed", "Public Bible API", "pdf-lib"],
   },

@@ -91,16 +91,16 @@ export function textToParagraphs(text: string): string[] {
 }
 
 export function pickQuestionStems(lang: Lang): string[] {
-  const required = QUESTION_POOL.filter((s) => s.required);
-  const optional = new Set(
-    shuffle(QUESTION_POOL.filter((s) => !s.required)).slice(
-      0,
-      QUESTION_COUNT - required.length,
-    ),
+  const stems = QUESTION_POOL.map((slot, category) =>
+    shuffle(slot.stems[lang]).map((stem) => ({ category, stem })),
   );
-  return QUESTION_POOL.filter((s) => s.required || optional.has(s)).map((s) =>
-    shuffle(s.stems[lang])[0],
+  const extra = shuffle(stems.flatMap((s) => s.slice(1))).slice(
+    0,
+    QUESTION_COUNT - stems.length,
   );
+  return [...stems.map((s) => s[0]), ...extra]
+    .sort((a, b) => a.category - b.category)
+    .map((s) => s.stem);
 }
 
 export function buildQuizPrompt(

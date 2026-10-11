@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LANGS, QUESTION_COUNT, type Lang } from "@/config/readingQuiz";
+import {
+  LANGS,
+  MIN_QUESTIONS,
+  QUESTION_COUNT,
+  type Lang,
+} from "@/config/readingQuiz";
 import {
   MAX_PASSAGE_CHARS,
   buildQuizPrompt,
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
     const { text, modelUsed } = await generateText(prompt, owner);
     let questions = parseQuizQuestions(text, QUESTION_COUNT);
 
-    if (questions.length < QUESTION_COUNT) {
+    if (questions.length < MIN_QUESTIONS) {
       const retry = await generateText(prompt, owner);
       const extra = parseQuizQuestions(retry.text, QUESTION_COUNT);
       const seen = new Set(questions.map((q) => q.question.toLowerCase()));

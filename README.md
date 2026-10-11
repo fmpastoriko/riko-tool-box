@@ -334,18 +334,24 @@ See `README-crossword.md` for full design notes.
 | News      | The Conversation Atom feed (ID or global EN), random pick from the 15 latest articles, first paragraphs  |
 | Bible     | bolls.life public API, TB (ID) or WEB (EN); random verse window grouped into paragraphs of about 4 verses |
 | Text      | Plain paragraphs, no numbering, at least 2 paragraphs per text                                           |
-| Questions | 5 per text, LLM-written, 5 options (A-E), answers must be provable from the text                         |
+| Questions | Up to 10 per text, LLM-written, 5 options (A-E), answers must be provable from the text, trimmed to fit   |
 | Pool      | Question patterns taken from PRISMA UTBK PPU, PBM, and Literasi Bahasa Inggris packets                   |
-| Output    | PDF: one text per page with its questions (numbered across texts), answer key with explanations at end   |
+| Output    | PDF: each text starts a new page, max 2 pages per text, questions numbered across texts, answer key at end |
 | History   | Each text saved with its questions; re-download as PDF                                                   |
 
 The question pool (`config/questionPool.ts`) groups patterns into six
-categories. Every quiz asks gist (title, main idea, purpose, summary), detail
-(true / EXCEPT / who / why / restatement) and vocabulary (synonym, antonym,
-hypernym, analogy) questions, plus two of reference ("X refers to"), reasoning
-(author's view, why mention, inference) and language (connector function,
-fill-in connector, sentence insertion, figurative phrase). One random pattern is
-drawn per category and the LLM fills it from the text. Paragraphs are tagged
+categories: gist (title, main idea, purpose, summary), detail (true / EXCEPT /
+who / why / restatement), vocabulary (synonym, antonym, hypernym, analogy),
+reference ("X refers to"), reasoning (author's view, why mention, inference) and
+language (connector function, fill-in connector, sentence insertion, figurative
+phrase). Each quiz draws one random pattern per category plus four more distinct
+patterns from any category (10 total, ordered by category), and the LLM fills
+them from the text. If fewer than 5 usable questions come back, one retry tops
+the set up.
+
+When rendering the PDF, a text whose page plus questions would run past 2 pages
+loses its last question (10, 9, 8, ...) until it fits; the answer key follows
+the trimmed set. The history page still lists every generated question. Paragraphs are tagged
 only inside the prompt; questions refer to them by ordinal word ("paragraf
 kedua", "the second paragraph").
 
