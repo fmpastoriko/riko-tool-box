@@ -6,6 +6,7 @@ export type ToolIconName =
   | "arithmeticpuzzle"
   | "wordsearch"
   | "crossword"
+  | "readingquiz"
   | "comingsoon";
 
 export interface ToolConfig {
@@ -103,6 +104,17 @@ export const TOOLS_CONFIG: ToolConfig[] = [
       "Generate Indonesian crossword puzzles. Pick a topic, difficulty, and word count; the LLM picks words plus clues and a backtracking solver lays them out on a grid. Download as PDF with answer key.",
     shortDescription: "Generate printable Indonesian crossword puzzles.",
     demonstrates: ["LLM clue gen", "Backtracking", "pdf-lib"],
+  },
+  {
+    href: "/tools/reading-quiz",
+    label: "Reading Quiz",
+    icon: "readingquiz",
+    highlight: true,
+    hasHistory: true,
+    description:
+      "Pull the latest news article or a random Bible passage, in Indonesian or English, and let the LLM write five UTBK-style reading comprehension questions about it: main idea, facts, word meaning, reference, inference. Multiple choice, scored in place, with a paragraph or verse reference behind every answer.",
+    shortDescription: "Latest news or a Bible passage, AI reading quiz.",
+    demonstrates: ["LLM quiz gen", "Atom feed", "Public Bible API", "DB"],
   },
 ];
 

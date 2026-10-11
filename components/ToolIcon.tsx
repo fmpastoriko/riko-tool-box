@@ -258,12 +258,65 @@ export function ToolIcon({
         <rect x="9.5" y="5" width="4" height="4" fill="white" opacity="0.95" />
         <rect x="14" y="5" width="4" height="4" fill="#1a1a1a" opacity="0.7" />
         <rect x="5" y="9.5" width="4" height="4" fill="#1a1a1a" opacity="0.7" />
-        <rect x="9.5" y="9.5" width="4" height="4" fill="white" opacity="0.95" />
+        <rect
+          x="9.5"
+          y="9.5"
+          width="4"
+          height="4"
+          fill="white"
+          opacity="0.95"
+        />
         <rect x="14" y="9.5" width="4" height="4" fill="white" opacity="0.95" />
-        <rect x="18.5" y="9.5" width="3" height="4" fill="white" opacity="0.95" />
+        <rect
+          x="18.5"
+          y="9.5"
+          width="3"
+          height="4"
+          fill="white"
+          opacity="0.95"
+        />
         <rect x="9.5" y="14" width="4" height="4" fill="white" opacity="0.95" />
         <rect x="14" y="14" width="4" height="4" fill="#1a1a1a" opacity="0.7" />
-        <rect x="9.5" y="18.5" width="4" height="3" fill="white" opacity="0.95" />
+        <rect
+          x="9.5"
+          y="18.5"
+          width="4"
+          height="3"
+          fill="white"
+          opacity="0.95"
+        />
+      </svg>
+    );
+  if (type === "readingquiz")
+    return (
+      <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
+        <rect
+          x="2"
+          y="2"
+          width="22"
+          height="22"
+          rx="4"
+          fill="currentColor"
+          opacity="0.9"
+        />
+        <path
+          d="M6 7h5.5a1.5 1.5 0 011.5 1.5V19a1.5 1.5 0 00-1.5-1.5H6z"
+          fill="white"
+          opacity="0.95"
+        />
+        <path
+          d="M20 7h-5.5a1.5 1.5 0 00-1.5 1.5V19a1.5 1.5 0 011.5-1.5H20z"
+          fill="white"
+          opacity="0.6"
+        />
+        <path
+          d="M11.6 11.2a1.5 1.5 0 112.3 1.3c-.5.3-.9.7-.9 1.3"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="13" cy="15.6" r="0.8" fill="currentColor" />
       </svg>
     );
   if (type === "alltools")
@@ -307,7 +360,6 @@ export function ToolIcon({
         />
       </svg>
     );
-  // comingsoon fallback
   return (
     <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
       <rect

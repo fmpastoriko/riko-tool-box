@@ -62,6 +62,8 @@ This site serves a dual purpose: it introduces the developer's background and ca
 | Google OAuth       | Owner authentication                                   | Active |
 | Groq API           | LLM for owner and public requests                      | Active |
 | Gemini API         | LLM for owner requests                                 | Active |
+| bolls.life API     | Public Bible text (TB, WEB) for Reading Quiz           | Active |
+| The Conversation   | Latest news Atom feeds (ID, EN) for Reading Quiz       | Active |
 
 ### 2.3 Auth & Access Control
 
@@ -93,6 +95,8 @@ Owner is determined by matching the Google account email against `OWNER_EMAIL`. 
 | /tools/arithmetic-puzzle/history | Arithmetic Puzzle History | Owner only                         |
 | /tools/word-search               | Word Search               | None                               |
 | /tools/word-search/history       | Word Search History       | Owner only                         |
+| /tools/reading-quiz              | Reading Quiz              | None                               |
+| /tools/reading-quiz/history      | Reading Quiz History      | Owner only                         |
 
 ---
 
@@ -322,6 +326,61 @@ See `README-crossword.md` for full design notes.
 
 ---
 
+### 5.8 Reading Quiz
+
+| Attribute | Detail                                                                                                   |
+| --------- | -------------------------------------------------------------------------------------------------------- |
+| Purpose   | Drill UTBK-style reading comprehension on fresh text                                                     |
+| News      | The Conversation Atom feed (ID or global EN), random pick from the 15 latest articles, first paragraphs  |
+| Bible     | bolls.life public API, TB (ID) or WEB (EN); random book + chapter in scope, random verse window          |
+| Questions | 5 per text, LLM-written, 5 options (A-E), answers must be provable from the text                         |
+| Pool      | Question patterns taken from PRISMA UTBK PPU, PBM, and Literasi Bahasa Inggris packets                   |
+| Grading   | Answer key ships with the questions; scored client-side, correct option revealed on submit               |
+| History   | Text, questions, picked answers, and score saved per quiz                                                |
+
+The question pool (`config/questionPool.ts`) groups patterns into six
+categories. Every quiz asks gist (title, main idea, purpose, summary), detail
+(true / EXCEPT / who / why / restatement) and vocabulary (synonym, antonym,
+hypernym, analogy) questions, plus two of reference ("X refers to"), reasoning
+(author's view, why mention, inference) and language (connector function,
+fill-in connector, sentence insertion, figurative phrase). One random pattern is
+drawn per category and the LLM fills it from the text.
+
+News articles are cut to at most 5 paragraphs or about 220 words, and an article
+under 120 words is skipped. The feed is cached for 15 minutes. Bible chapters
+shorter than 4 verses are re-rolled (up to 5 picks). Options are reshuffled
+server-side because models like putting the correct answer first, and a
+malformed question set triggers one retry before the request fails.
+
+#### Options
+
+| Option         | Range / Values                                                 |
+| -------------- | -------------------------------------------------------------- |
+| Source         | Latest News / Bible                                            |
+| Language       | Indonesia / English                                            |
+| Passage scope  | Narrative / Old Testament / New Testament / Whole (Bible only) |
+| Passage length | 4-15 verses (Bible only)                                       |
+
+#### API Routes
+
+| Route                          | Method | Auth  | Description                                 |
+| ------------------------------ | ------ | ----- | ------------------------------------------- |
+| /api/reading-quiz/text         | POST   | None  | Fetch a news article or Bible passage       |
+| /api/reading-quiz/quiz         | POST   | None  | Generate 5 questions for the text via LLM   |
+| /api/reading-quiz/sessions     | GET    | None  | List quizzes (IP-scoped)                    |
+| /api/reading-quiz/sessions     | POST   | None  | Save a generated quiz                       |
+| /api/reading-quiz/sessions/:id | GET    | None  | Get single quiz                             |
+| /api/reading-quiz/sessions/:id | PATCH  | None  | Record submitted answers and score          |
+| /api/reading-quiz/sessions/:id | DELETE | Owner | Delete quiz                                 |
+
+#### Database Schema
+
+| Table                 | Key Columns                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| reading_quiz_sessions | id (uuid), source, lang, title, origin, url, passage_text, questions_json, answers_json, score, hashed_ip, user_id, created_at |
+
+---
+
 ## 6. Local Setup
 
 ### Prerequisites
@@ -391,6 +450,20 @@ NEXT_PUBLIC_LOCAL=true
 
 ```
 
+### Rotating the encryption key
+
+Owner rows are encrypted with `ENCRYPTION_KEY`, so swapping the key alone makes
+them unreadable. In a shell that has `NEON_DATABASE_URL` and the current
+`ENCRYPTION_KEY` loaded, run:
+
+```bash
+node scripts/rotate-encryption-key.mjs
+```
+
+It generates a new key, prints it, and re-encrypts every owner row with it. Put
+that key in `ENCRYPTION_KEY` and restart the app. If the run dies halfway,
+re-run with the printed key as the argument so every row ends up on one key.
+
 ### 4. Google OAuth setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials
@@ -433,6 +506,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Code Applier                            | Complete |
 | Arithmetic Puzzle Generator             | Complete |
 | Word Search Generator                   | Complete |
+| Reading Quiz (news + Bible, ID/EN)      | Complete |
 | Code Briefer (hosted mode, file upload) | Planned  |
 | JSON Table Viewer                       | Planned  |
 | AI Crossword (Bahasa Indonesia)         | Planned  |

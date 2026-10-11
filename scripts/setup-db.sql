@@ -1,20 +1,4 @@
--- =============================================================================
--- Riko Toolbox: Database Migration
--- Run this in your Neon SQL editor to set up the full schema from scratch.
--- Safe to re-run: all statements use IF NOT EXISTS / ON CONFLICT DO NOTHING.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
--- Extensions
--- -----------------------------------------------------------------------------
-
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
-
--- -----------------------------------------------------------------------------
--- Text Compare
--- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS comparisons (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,11 +12,6 @@ CREATE TABLE IF NOT EXISTS comparisons (
 CREATE INDEX IF NOT EXISTS idx_comparisons_created_at ON comparisons (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comparisons_hashed_ip  ON comparisons (hashed_ip);
 
-
--- -----------------------------------------------------------------------------
--- Code Briefer: Prompt Templates
--- -----------------------------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS prompt_templates (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   label       TEXT        NOT NULL,
@@ -44,7 +23,6 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
 
 CREATE INDEX IF NOT EXISTS idx_prompt_templates_used ON prompt_templates (used_count DESC, sort_order ASC);
 
--- Default templates (idempotent: skipped if label already exists)
 INSERT INTO prompt_templates (label, body, sort_order) VALUES
   ('Issues',      'Review this code for bugs and potential issues',                                                       1),
   ('Bug Fix',     'Fix the bug described in the additional prompt',                                                        2),
@@ -61,11 +39,6 @@ INSERT INTO prompt_templates (label, body, sort_order) VALUES
   ('Docs',        'Write documentation',                                                                                   13)
 ON CONFLICT DO NOTHING;
 
-
--- -----------------------------------------------------------------------------
--- Code Briefer: Sessions & Outputs
--- -----------------------------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS context_sessions (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   prompt_label      TEXT        NOT NULL,
@@ -81,7 +54,6 @@ CREATE TABLE IF NOT EXISTS context_sessions (
 CREATE INDEX IF NOT EXISTS idx_context_sessions_created_at ON context_sessions (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_context_sessions_hashed_ip  ON context_sessions (hashed_ip);
 
-
 CREATE TABLE IF NOT EXISTS context_outputs (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id  UUID        NOT NULL REFERENCES context_sessions (id) ON DELETE CASCADE,
@@ -92,11 +64,6 @@ CREATE TABLE IF NOT EXISTS context_outputs (
 
 CREATE INDEX IF NOT EXISTS idx_context_outputs_session_id  ON context_outputs (session_id);
 CREATE INDEX IF NOT EXISTS idx_context_outputs_created_at  ON context_outputs (created_at DESC);
-
-
--- -----------------------------------------------------------------------------
--- Chatbot: Sessions & Messages
--- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -111,7 +78,6 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id    ON chat_sessions (user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_created_at ON chat_sessions (created_at DESC);
 
-
 CREATE TABLE IF NOT EXISTS chat_messages (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id  UUID        NOT NULL REFERENCES chat_sessions (id) ON DELETE CASCADE,
@@ -124,12 +90,24 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id  ON chat_messages (session_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at  ON chat_messages (created_at DESC);
 
+CREATE TABLE IF NOT EXISTS reading_quiz_sessions (
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  source         TEXT        NOT NULL,
+  lang           TEXT        NOT NULL,
+  title          TEXT        NOT NULL,
+  origin         TEXT        NOT NULL,
+  url            TEXT,
+  passage_text   TEXT        NOT NULL,
+  questions_json TEXT        NOT NULL,
+  answers_json   TEXT,
+  score          INTEGER,
+  hashed_ip      TEXT,
+  user_id        TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- -----------------------------------------------------------------------------
--- LLM Key Exhaustion Tracking
--- Tracks which API keys have hit their rate/quota limit for the current window.
--- Resets are checked in application code against WIB_RESET_HOUR.
--- -----------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_reading_quiz_sessions_created_at ON reading_quiz_sessions (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reading_quiz_sessions_hashed_ip  ON reading_quiz_sessions (hashed_ip);
 
 CREATE TABLE IF NOT EXISTS llm_exhaustion (
   model        TEXT        NOT NULL,
@@ -139,8 +117,3 @@ CREATE TABLE IF NOT EXISTS llm_exhaustion (
 );
 
 CREATE INDEX IF NOT EXISTS idx_llm_exhaustion_exhausted_at ON llm_exhaustion (exhausted_at DESC);
-
-
--- =============================================================================
--- Done.
--- =============================================================================
