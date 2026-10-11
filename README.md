@@ -191,7 +191,7 @@ Owner data is encrypted at rest. Raw IPs are never stored, SHA-256 hash used as 
 | Owner           | Persistent, encrypted, 10 session cap                                             |
 | Message limit   | 100 per session                                                                   |
 | Image input     | File picker + clipboard paste                                                     |
-| LLM routing     | Owner: Gemini/Groq chain with auto key rotation. Unauthenticated: Public Groq key |
+| LLM routing     | Owner (local or deployed): Gemini/Groq chain with auto key rotation, falls back to the public Groq key when no owner key works. Others: public Groq key |
 
 #### API Routes
 

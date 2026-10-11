@@ -9,8 +9,6 @@ import {
 import { getExhaustedKeys, markKeyExhausted } from "@/lib/llmExhaustion";
 import { PUBLIC_GROQ_MODEL } from "@/config/llm";
 
-const IS_LOCAL = process.env.NEXT_PUBLIC_LOCAL === "true";
-
 type ContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -259,43 +257,40 @@ function dispatchText(
   return groqGenerateText(config.model, key, prompt);
 }
 
+function ownerChain(
+  preferredModel: string | undefined,
+  tokenCount: number,
+): ModelConfig[] {
+  if (!preferredModel) return getChainForTokens(tokenCount);
+  const preferred = PROVIDER_CHAIN.find((m) => m.model === preferredModel);
+  return preferred
+    ? [preferred, ...PROVIDER_CHAIN.filter((m) => m.model !== preferredModel)]
+    : PROVIDER_CHAIN;
+}
+
 export async function streamChat(
   messages: ChatMessage[],
   isOwner: boolean,
   preferredModel?: string,
 ): Promise<{ stream: ReadableStream<Uint8Array>; modelUsed: string }> {
-  const publicKey = process.env.GROQ_API_KEY_PUBLIC;
-
-  if (!IS_LOCAL || !isOwner) {
-    if (!publicKey) throw new Error("No models available");
-    const stream = await groqStreamRequest(
-      PUBLIC_GROQ_MODEL,
-      publicKey,
-      messages,
+  if (isOwner) {
+    const found = await tryChain(
+      ownerChain(preferredModel, estimateTokenCount(messages)),
+      (config, key) => dispatchStream(config, key, messages),
     );
-    if (!stream) throw new Error("No models available");
-    return { stream, modelUsed: PUBLIC_GROQ_MODEL };
+    if (found) {
+      return {
+        stream: found.result as ReadableStream<Uint8Array>,
+        modelUsed: found.modelUsed,
+      };
+    }
   }
 
-  let chain: ModelConfig[];
-  if (preferredModel) {
-    const preferred = PROVIDER_CHAIN.find((m) => m.model === preferredModel);
-    chain = preferred
-      ? [preferred, ...PROVIDER_CHAIN.filter((m) => m.model !== preferredModel)]
-      : PROVIDER_CHAIN;
-  } else {
-    chain = getChainForTokens(estimateTokenCount(messages));
-  }
-
-  const found = await tryChain(chain, (config, key) =>
-    dispatchStream(config, key, messages),
-  );
-
-  if (!found) throw new Error("No models available");
-  return {
-    stream: found.result as ReadableStream<Uint8Array>,
-    modelUsed: found.modelUsed,
-  };
+  const publicKey = process.env.GROQ_API_KEY_PUBLIC;
+  if (!publicKey) throw new Error("No models available");
+  const stream = await groqStreamRequest(PUBLIC_GROQ_MODEL, publicKey, messages);
+  if (!stream) throw new Error("No models available");
+  return { stream, modelUsed: PUBLIC_GROQ_MODEL };
 }
 
 export async function generateText(
@@ -303,29 +298,17 @@ export async function generateText(
   isOwner: boolean,
   preferredModel?: string,
 ): Promise<{ text: string; modelUsed: string }> {
+  if (isOwner) {
+    const found = await tryChain(
+      ownerChain(preferredModel, Math.ceil(prompt.length / 4)),
+      (config, key) => dispatchText(config, key, prompt),
+    );
+    if (found) return { text: found.result as string, modelUsed: found.modelUsed };
+  }
+
   const publicKey = process.env.GROQ_API_KEY_PUBLIC;
-
-  if (!IS_LOCAL || !isOwner) {
-    if (!publicKey) throw new Error("No models available");
-    const text = await groqGenerateText(PUBLIC_GROQ_MODEL, publicKey, prompt);
-    if (text === null) throw new Error("No models available");
-    return { text, modelUsed: PUBLIC_GROQ_MODEL };
-  }
-
-  let chain: ModelConfig[];
-  if (preferredModel) {
-    const preferred = PROVIDER_CHAIN.find((m) => m.model === preferredModel);
-    chain = preferred
-      ? [preferred, ...PROVIDER_CHAIN.filter((m) => m.model !== preferredModel)]
-      : PROVIDER_CHAIN;
-  } else {
-    chain = getChainForTokens(Math.ceil(prompt.length / 4));
-  }
-
-  const found = await tryChain(chain, (config, key) =>
-    dispatchText(config, key, prompt),
-  );
-
-  if (!found) throw new Error("No models available");
-  return { text: found.result as string, modelUsed: found.modelUsed };
+  if (!publicKey) throw new Error("No models available");
+  const text = await groqGenerateText(PUBLIC_GROQ_MODEL, publicKey, prompt);
+  if (text === null) throw new Error("No models available");
+  return { text, modelUsed: PUBLIC_GROQ_MODEL };
 }
